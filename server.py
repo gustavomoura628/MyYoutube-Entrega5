@@ -34,6 +34,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             os.system("ls > list.txt")
             send_file(conn, "list.txt", "text/html")
 
+        elif request.startswith("GET /favicon.ico "):
+            send_file(conn, "favicon.ico", "image/avif")
 
         elif request.startswith("GET / "):
             send_file(conn, "index.html", "text/html")
