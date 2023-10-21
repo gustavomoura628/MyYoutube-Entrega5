@@ -1,175 +1,9 @@
 import socket
 import os
 
-def generate_html_player_file(video_name):
-    # HTML template with double curly braces for substitution
-    html_template = """<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body {{
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #222; /* Dark background color */
-    }}
-
-    h1 {{
-      text-align: center;
-      background-color: #333;
-      color: #fff;
-      padding: 0px;
-    }}
-
-    video {{
-      display: block;
-      margin: 0 auto;
-    }}
-
-    .back-button {{
-      text-align: left;
-      margin: 10px;
-    }}
-
-    .back-button a {{
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #333;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 5px;
-    }}
-  </style>
-</head>
-<body>
-  <!-- Back Button -->
-  <div class="back-button">
-    <a href="http://localhost:8080/list">Go Back</a>
-  </div>
-  <h1>{}</h1>
-  <!-- Video Player -->
-  <video width="1280" height="540" controls>
-    <source src="http://localhost:8080/video/{}" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-</body>
-</html>
-"""
-
-    # Replace %20 with spaces
-    parts = video_name.split("%20")
-    video_name_spaces = " ".join(parts)
-
-    # Replace double curly braces with the provided video_name
-    html_content = html_template.format(video_name_spaces, video_name)
-
-    # Write the HTML content to a file
-    with open("video_player.html", "w") as html_file:
-        html_file.write(html_content)
-
-# Example usage
-# generate_html_player_file("example_video.mp4")
-
-
-import os
-
-def generate_html_list_file(directory_path, output_file, base_url="http://localhost:8080/watch/"):
-    # Verify that the given directory exists
-    if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
-        print(f"Directory '{directory_path}' does not exist.")
-        return
-
-    # List all files in the directory
-    files = os.listdir(directory_path)
-
-    # Create an HTML file
-    with open(output_file, 'w') as html_file:
-        # Write the HTML content manually
-        html_file.write("""<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body {
-      background-color: #222;
-      color: #ffffff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-
-    h1 {
-      color: #ffffff;
-      text-align: center;
-      background-color: #333;
-      padding: 10px;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    li {
-      margin: 10px 0;
-    }
-
-    .file-link {
-      text-decoration: none;
-    }
-
-    .file-link-button {
-      background-color: #333;
-      color: #ffffff;
-      padding: 10px 15px;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-      display: block;
-      margin: 0 auto;
-    }
-
-    .file-link-button:hover {
-      background-color: #444;
-    }
-
-    .go-back-button {
-      text-align: left;
-      margin: 10px;
-    }
-
-    .go-back-button a {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #333;
-      color: #ffffff;
-      text-decoration: none;
-      border-radius: 5px;
-    }
-  </style>
-</head>
-<body>
-  <!-- Go Back Button -->
-  <div class="go-back-button">
-    <a href="http://localhost:8080/">Go Back</a>
-  </div>
-  <h1>File List</h1>
-  <ul>
-    """)
-
-        # Create clickable links for each file with custom URLs
-        for file in files:
-            file_path = os.path.join(directory_path, file)
-            if os.path.isfile(file_path):
-                file_name = file
-                file_url = base_url + file_name
-                file_link = f'<a href="{file_url}" class="file-link"><button class="file-link-button">{file_name}</button></a>'
-                html_file.write(f'<li>{file_link}</li>\n')
-
-        # Close the HTML file
-        html_file.write('</ul>\n</body>\n</html>')
-
-    print(f"HTML file '{output_file}' has been generated.")
-
+import generate_player_html
+import generate_list_html
+import generate_index_html
 
 
 HOST = ""
@@ -244,15 +78,19 @@ def parse_line_of_value(line):
             if(DEBUG_PRINT): print(key," = ",table[key])
         if(DEBUG_PRINT): print("Value = ",line)
 
-def send_file(conn, file_path, file_type):
-    with open(file_path, "rb") as file:
-        file_data = file.read()
+def send_bytes_of_file(conn, file_data, file_type):
         response = "HTTP/1.1 200 OK\r\n"
         response += "Content-Length: {}\r\n".format(len(file_data))
         response += "Content-Type: {}\r\n".format(file_type)
         response += "\r\n"
         conn.sendall(response.encode())
         conn.sendall(file_data)
+
+def send_file(conn, file_path, file_type):
+    with open(file_path, "rb") as file:
+        file_data = file.read()
+        send_bytes_of_file(conn, file_data, file_type)
+
 
 def get_header(request_data):
         header_end = request_data.find(b"\r\n\r\n")+4
@@ -359,22 +197,20 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 send_file(conn, "uploads/"+video_name, "video/mp4")
 
             elif header['url'] == "/list":
-                generate_html_list_file('uploads','list.html')
-                send_file(conn, "list.html", "text/html")
-
-                #os.system("ls uploads > list.txt")
-                #send_file(conn, "list.txt", "text/html")
+                list_html = generate_list_html.generate('uploads', host = header['Host'])
+                send_bytes_of_file(conn, list_html, "text/html")
 
             elif header['url'].startswith("/watch"):
                 video_name = header['url'][len("/watch/"):]
-                generate_html_player_file(video_name)
-                send_file(conn, "video_player.html", "text/html")
+                video_player_html = generate_player_html.generate(video_name, host = header['Host'])
+                send_bytes_of_file(conn, video_player_html, "text/html")
 
             elif header['url'] == "/favicon.ico":
                 send_file(conn, "favicon.ico", "image/avif")
 
             elif header['url'] == "/":
-                send_file(conn, "index.html", "text/html")
+                index_html = generate_index_html.generate(host = header['Host'])
+                send_bytes_of_file(conn, index_html, "text/html")
 
             else:
                 send_file(conn, "not_found.html", "text/html")
@@ -404,8 +240,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                             file.write(sub_body_data)
 
 
-                        generate_html_list_file('uploads','list.html')
-                        send_file(conn, "list.html", "text/html")
+                        list_html = generate_list_html.generate('uploads', host = header['Host'])
+                        send_bytes_of_file(conn, list_html, "text/html")
 
         else:
             send_file(conn, "not_found.html", "text/html")
