@@ -18,7 +18,7 @@ def generate_html_player_file(video_name):
       text-align: center;
       background-color: #333;
       color: #fff;
-      padding: 10px;
+      padding: 0px;
     }}
 
     video {{
@@ -48,7 +48,7 @@ def generate_html_player_file(video_name):
   </div>
   <h1>{}</h1>
   <!-- Video Player -->
-  <video width="640" height="480" controls>
+  <video width="1280" height="540" controls>
     <source src="http://localhost:8080/video/{}" type="video/mp4">
     Your browser does not support the video tag.
   </video>
@@ -317,6 +317,9 @@ def receive_until_end_of_body(conn, body_data, Content_Length):
 
     return request
 
+def print_dictionary(table):
+    for key in table:
+        print(key, " = ", table[key])
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -327,6 +330,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     
     while True:
         conn, addr = s.accept()
+        print("\n\n\n")
         print(f"Connected by {addr}")
         request = receive_until_header(conn)
 
@@ -335,6 +339,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if(DEBUG_PRINT): print("Request until header = \n",request,"\n\n\n")
         header_data = get_header(request)
         header = parse_header(header_data)
+        print_dictionary(header)
 
         body_data = get_body(request)
         if 'Content-Length' in header:
