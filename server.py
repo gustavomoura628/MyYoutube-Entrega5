@@ -1,7 +1,79 @@
 import socket
 import os
 
-def generate_html_file(directory_path, output_file, base_url="http://localhost:8080/watch/"):
+def generate_html_player_file(video_name):
+    # HTML template with double curly braces for substitution
+    html_template = """<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {{
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #222; /* Dark background color */
+    }}
+
+    h1 {{
+      text-align: center;
+      background-color: #333;
+      color: #fff;
+      padding: 10px;
+    }}
+
+    video {{
+      display: block;
+      margin: 0 auto;
+    }}
+
+    .back-button {{
+      text-align: left;
+      margin: 10px;
+    }}
+
+    .back-button a {{
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #333;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 5px;
+    }}
+  </style>
+</head>
+<body>
+  <!-- Back Button -->
+  <div class="back-button">
+    <a href="http://localhost:8080/list">Go Back</a>
+  </div>
+  <h1>{}</h1>
+  <!-- Video Player -->
+  <video width="640" height="480" controls>
+    <source src="http://localhost:8080/video/{}" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+</body>
+</html>
+"""
+
+    # Replace %20 with spaces
+    parts = video_name.split("%20")
+    video_name_spaces = " ".join(parts)
+
+    # Replace double curly braces with the provided video_name
+    html_content = html_template.format(video_name_spaces, video_name)
+
+    # Write the HTML content to a file
+    with open("video_player.html", "w") as html_file:
+        html_file.write(html_content)
+
+# Example usage
+# generate_html_player_file("example_video.mp4")
+
+
+import os
+
+def generate_html_list_file(directory_path, output_file, base_url="http://localhost:8080/watch/"):
     # Verify that the given directory exists
     if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
         print(f"Directory '{directory_path}' does not exist.")
@@ -13,17 +85,76 @@ def generate_html_file(directory_path, output_file, base_url="http://localhost:8
     # Create an HTML file
     with open(output_file, 'w') as html_file:
         # Write the HTML content manually
-        html_file.write('<html>\n<head><title>File List</title>\n')
-        html_file.write('<style>\n')
-        html_file.write('body { background-color: #1e1e1e; color: #ffffff; }\n')
-        html_file.write('ul { list-style: none; padding: 0; }\n')
-        html_file.write('li { margin: 10px 0; }\n')
-        html_file.write('.file-link { text-decoration: none; }\n')
-        html_file.write('.file-link-button { background-color: #0099cc; color: #ffffff; padding: 10px 15px; border: none; cursor: pointer; }\n')
-        html_file.write('.file-link-button:hover { background-color: #0077aa; }\n')
-        html_file.write('</style>\n')
-        html_file.write('</head>\n<body>\n')
-        html_file.write('<h1 style="color: #0099cc;">File List</h1>\n<ul>\n')
+        html_file.write("""<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      background-color: #222;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      color: #ffffff;
+      text-align: center;
+      background-color: #333;
+      padding: 10px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      margin: 10px 0;
+    }
+
+    .file-link {
+      text-decoration: none;
+    }
+
+    .file-link-button {
+      background-color: #333;
+      color: #ffffff;
+      padding: 10px 15px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .file-link-button:hover {
+      background-color: #444;
+    }
+
+    .go-back-button {
+      text-align: left;
+      margin: 10px;
+    }
+
+    .go-back-button a {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #333;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Go Back Button -->
+  <div class="go-back-button">
+    <a href="http://localhost:8080/">Go Back</a>
+  </div>
+  <h1>File List</h1>
+  <ul>
+    """)
 
         # Create clickable links for each file with custom URLs
         for file in files:
@@ -39,8 +170,6 @@ def generate_html_file(directory_path, output_file, base_url="http://localhost:8
 
     print(f"HTML file '{output_file}' has been generated.")
 
-# Example usage
-generate_html_file('/path/to/your/directory', 'file_list.html')
 
 
 HOST = ""
@@ -158,11 +287,11 @@ def remove_quotes(string):
     return string[1:len(string)-1]
 
 def receive_until_header(conn):
-    request = conn.recv(1024)
+    request = conn.recv(2**20)
     while True:
         if(request.find(b"\r\n\r\n") != -1):
             break
-        request += conn.recv(1024)
+        request += conn.recv(2**20)
 
     return request
 
@@ -201,7 +330,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         print(f"Connected by {addr}")
         request = receive_until_header(conn)
 
-        DEBUG_PRINT = True
+        DEBUG_PRINT = False
 
         if(DEBUG_PRINT): print("Request until header = \n",request,"\n\n\n")
         header_data = get_header(request)
@@ -217,15 +346,24 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if(DEBUG_PRINT): print("Body Length = ",len(body_data))
 
         if header['method'] == "GET":
-            if header['url'] == "/video":
-                send_file(conn, "video.mp4", "video/mp4")
+            if header['url'].startswith("/video"):
+                video_name = header['url'][len("/video/"):]
+                # Replace %20 with spaces
+                parts = video_name.split("%20")
+                video_name = " ".join(parts)
+                send_file(conn, "uploads/"+video_name, "video/mp4")
 
             elif header['url'] == "/list":
-                generate_html_file('uploads','list.html')
+                generate_html_list_file('uploads','list.html')
                 send_file(conn, "list.html", "text/html")
 
                 #os.system("ls uploads > list.txt")
                 #send_file(conn, "list.txt", "text/html")
+
+            elif header['url'].startswith("/watch"):
+                video_name = header['url'][len("/watch/"):]
+                generate_html_player_file(video_name)
+                send_file(conn, "video_player.html", "text/html")
 
             elif header['url'] == "/favicon.ico":
                 send_file(conn, "favicon.ico", "image/avif")
@@ -259,7 +397,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         file_path += remove_quotes(content_disposition['filename'])
                         with open(file_path, "wb") as file:
                             file.write(sub_body_data)
-                        send_file(conn, "index.html", "text/html")
+
+
+                        generate_html_list_file('uploads','list.html')
+                        send_file(conn, "list.html", "text/html")
 
         else:
             send_file(conn, "not_found.html", "text/html")

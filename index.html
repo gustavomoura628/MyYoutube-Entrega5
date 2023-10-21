@@ -9,18 +9,6 @@
       background-color: #222; /* Dark background color */
     }
 
-    h1 {
-      text-align: center;
-      background-color: #333;
-      color: #fff;
-      padding: 10px;
-    }
-
-    video {
-      display: block;
-      margin: 0 auto;
-    }
-
     .buttons-container {
       text-align: center;
     }
@@ -76,7 +64,7 @@
       margin: 10px 0;
       color: #007f00; /* Green color for success messages */
     }
-    
+
     /* Style for the "Show Video List" button and container */
     .button-container {
       background-color: #333; /* Dark background color */
@@ -104,24 +92,20 @@
     .show-list-button:hover {
       background-color: #777;
     }
+
+    /* Make the h2 elements white */
+    h2 {
+      color: #fff;
+    }
   </style>
 </head>
 <body>
-  <h1>Video Playback, File Upload and File List</h1>
-
-  <!-- Video Player -->
-  <video width="640" height="480" controls>
-    <source src="http://localhost:8080/video" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-
   <div class="buttons-container">
     <!-- File Upload Form -->
     <div class="form-container">
       <form enctype="multipart/form-data" action="http://localhost:8080/upload" method="POST">
         <h2>Upload a Video File</h2>
         <div class="file-input-container">
-          <label for "uploadedfile">Choose a file to upload:</label>
           <input name="uploadedfile" type="file" id="uploadedfile" accept=".mp4" required>
         </div>
         <button class="upload-button" type="submit">Upload File</button>
