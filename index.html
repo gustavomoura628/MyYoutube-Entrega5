@@ -1,10 +1,139 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #222; /* Dark background color */
+    }
+
+    h1 {
+      text-align: center;
+      background-color: #333;
+      color: #fff;
+      padding: 10px;
+    }
+
+    video {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .buttons-container {
+      text-align: center;
+    }
+
+    .form-container {
+      background-color: #333; /* Dark background color */
+      padding: 20px;
+      margin: 40px 10px 0; /* Added margin-top for more separation */
+      width: 400px; /* Set a specific width to match the Show Video List box */
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      display: inline-block; /* Display forms side by side */
+    }
+
+    .file-input-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* Center-align the file input */
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #fff; /* Text color for labels */
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .upload-button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background-color: #555; /* Different color for the button */
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px; /* Added top margin for spacing */
+    }
+
+    .upload-button:hover {
+      background-color: #777;
+    }
+
+    #upload-message {
+      text-align: center;
+      margin: 10px 0;
+      color: #007f00; /* Green color for success messages */
+    }
+    
+    /* Style for the "Show Video List" button and container */
+    .button-container {
+      background-color: #333; /* Dark background color */
+      padding: 20px;
+      margin: 40px 10px 0; /* Added margin-top for more separation */
+      width: 400px; /* Set a specific width to match the Upload a Video File box */
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      display: inline-block; /* Display side by side */
+      text-align: center;
+    }
+
+    .show-list-button {
+      display: block;
+      padding: 10px 20px;
+      background-color: #555;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none; /* Remove underline from links */
+    }
+
+    .show-list-button:hover {
+      background-color: #777;
+    }
+  </style>
+</head>
 <body>
+  <h1>Video Playback, File Upload and File List</h1>
 
-<video width="640" height="480" controls>
-  <source src="http://192.168.0.14:1234/video" type="video/mp4">
-</video>
+  <!-- Video Player -->
+  <video width="640" height="480" controls>
+    <source src="http://localhost:8080/video" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
 
+  <div class="buttons-container">
+    <!-- File Upload Form -->
+    <div class="form-container">
+      <form enctype="multipart/form-data" action="http://localhost:8080/upload" method="POST">
+        <h2>Upload a Video File</h2>
+        <div class="file-input-container">
+          <label for "uploadedfile">Choose a file to upload:</label>
+          <input name="uploadedfile" type="file" id="uploadedfile" accept=".mp4" required>
+        </div>
+        <button class="upload-button" type="submit">Upload File</button>
+      </form>
+    </div>
+
+    <!-- Show Video List Button and Container -->
+    <div class="button-container">
+      <h2>Show Video List</h2>
+      <a href="http://localhost:8080/list" class="show-list-button">Show List</a>
+    </div>
+  </div>
 </body>
 </html>
+
