@@ -213,7 +213,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 send_bytes_of_file(conn, index_html, "text/html")
 
             else:
-                send_file(conn, "not_found.html", "text/html")
+                send_bytes_of_file(conn, b"404 not found", "text/html")
 
         elif header['method'] == "POST":
             if header['url'] == "/upload":
@@ -244,6 +244,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         send_bytes_of_file(conn, list_html, "text/html")
 
         else:
-            send_file(conn, "not_found.html", "text/html")
+            send_bytes_of_file(conn, b"404 not found", "text/html")
         
         conn.close()
