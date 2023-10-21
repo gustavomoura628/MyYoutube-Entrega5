@@ -46,7 +46,7 @@ def generate(video_name, host = "localhost:8080"):
   </div>
   <h1>{}</h1>
   <!-- Video Player -->
-  <video width="1280" height="540" controls>
+  <video width="720" height="540" controls>
     <source src="{}video/{}" type="video/mp4">
     Your browser does not support the video tag.
   </video>
