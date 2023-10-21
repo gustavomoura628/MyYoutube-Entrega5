@@ -66,6 +66,7 @@ def generate(host = "localhost:8080"):
       text-align: center;
       margin: 10px 0;
       color: #007f00; /* Green color for success messages */
+      display: none; /* Hidden by default */
     }}
 
     /* Style for the "Show Video List" button and container */
@@ -119,7 +120,8 @@ def generate(host = "localhost:8080"):
         <div class="file-input-container">
           <input name="uploadedfile" type="file" id="uploadedfile" accept=".mp4" required>
         </div>
-        <button class="upload-button" type="submit">Upload File</button>
+        <button class="upload-button" type="submit" onclick="showUploadMessage()">Upload File</button>
+        <div id="upload-message">Uploading, please wait...</div>
       </form>
     </div>
 
@@ -129,6 +131,13 @@ def generate(host = "localhost:8080"):
       <a href="{}list" class="show-list-button">Show List</a>
     </div>
   </div>
+
+  <script>
+    function showUploadMessage() {{
+      var messageDiv = document.getElementById("upload-message");
+      messageDiv.style.display = "block";
+    }}
+  </script>
 </body>
 </html>"""
     html_content = html_content.format(base_url, base_url)

@@ -159,6 +159,95 @@ def print_dictionary(table):
     for key in table:
         print(key, " = ", table[key])
 
+import threading
+
+def handle_http_request(conn, addr):
+    print("\n\n\n")
+    print(f"Connected by {addr}")
+    request = receive_until_header(conn)
+
+    DEBUG_PRINT = False
+
+    if(DEBUG_PRINT): print("Request until header = \n",request,"\n\n\n")
+    header_data = get_header(request)
+    header = parse_header(header_data)
+    print_dictionary(header)
+
+    body_data_remainder = get_body(request)
+
+    if(DEBUG_PRINT): print("Header = ",header)
+    #if(DEBUG_PRINT): print("\n\n\nBody = ",body_data)
+    #
+    #if(DEBUG_PRINT): print("Body Length = ",len(body_data))
+
+    if header['method'] == "GET":
+        if header['url'].startswith("/video"):
+            video_name = header['url'][len("/video/"):]
+            # Replace %20 with spaces
+            parts = video_name.split("%20")
+            video_name = " ".join(parts)
+            send_file(conn, "uploads/"+video_name, "video/mp4")
+
+        elif header['url'] == "/list":
+            list_html = generate_list_html.generate('uploads', host = header['Host'])
+            send_bytes_of_file(conn, list_html, "text/html")
+
+        elif header['url'].startswith("/watch"):
+            video_name = header['url'][len("/watch/"):]
+            video_player_html = generate_player_html.generate(video_name, host = header['Host'])
+            send_bytes_of_file(conn, video_player_html, "text/html")
+
+        elif header['url'] == "/favicon.ico":
+            send_file(conn, "favicon.ico", "image/avif")
+
+        elif header['url'] == "/":
+            index_html = generate_index_html.generate(host = header['Host'])
+            send_bytes_of_file(conn, index_html, "text/html")
+
+        else:
+            send_bytes_of_file(conn, b"404 not found", "text/html")
+
+    elif header['method'] == "POST":
+        if header['url'] == "/upload":
+            DEBUG_PRINT = False
+            content_type = parse_line_of_value(header['Content-Type'])
+            if(DEBUG_PRINT): print("Content Type Table = ",content_type)
+            if content_type['main'] == "multipart/form-data": 
+
+                if not 'Content-Length' in header:
+                    print("ERROR: Could not find Content-Length in Header!")
+                    exit(1)
+
+                body_data = receive_until_end_of_body(conn, body_data_remainder, header['Content-Length'])
+
+                if(DEBUG_PRINT): print("Boundary = ",content_type['boundary'])
+                data = get_array_of_multipart_data(body_data, content_type['boundary'])
+                for sub_request in data:
+                    if(DEBUG_PRINT): print("sub Request = \n",sub_request,"\n\n\n")
+                    sub_header_data = get_header(sub_request)
+                    sub_body_data = get_body(sub_request)
+                    sub_header = parse_header(sub_header_data, is_sub_header=True)
+                    if(DEBUG_PRINT): print("sub Header = ",sub_header)
+                    if(DEBUG_PRINT): print("\n\n\nsub Body = ",sub_body_data)
+
+                    
+                    content_disposition = parse_line_of_value(sub_header['Content-Disposition'])
+                    if(DEBUG_PRINT): print("\n\n\ncontent_disposition = ",content_disposition)
+                    file_path = "uploads/"
+                    video_name = remove_quotes(content_disposition['filename'])
+                    file_path += video_name
+                    with open(file_path, "wb") as file:
+                        file.write(sub_body_data)
+
+
+                    video_player_html = generate_player_html.generate(video_name, host = header['Host'])
+                    send_bytes_of_file(conn, video_player_html, "text/html")
+
+    else:
+        send_bytes_of_file(conn, b"404 not found", "text/html")
+    
+    conn.close()
+
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(("", PORT))
@@ -168,82 +257,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     
     while True:
         conn, addr = s.accept()
-        print("\n\n\n")
-        print(f"Connected by {addr}")
-        request = receive_until_header(conn)
-
-        DEBUG_PRINT = False
-
-        if(DEBUG_PRINT): print("Request until header = \n",request,"\n\n\n")
-        header_data = get_header(request)
-        header = parse_header(header_data)
-        print_dictionary(header)
-
-        body_data = get_body(request)
-        if 'Content-Length' in header:
-            body_data = receive_until_end_of_body(conn, body_data, header['Content-Length'])
-
-        if(DEBUG_PRINT): print("Header = ",header)
-        if(DEBUG_PRINT): print("\n\n\nBody = ",body_data)
-        
-        if(DEBUG_PRINT): print("Body Length = ",len(body_data))
-
-        if header['method'] == "GET":
-            if header['url'].startswith("/video"):
-                video_name = header['url'][len("/video/"):]
-                # Replace %20 with spaces
-                parts = video_name.split("%20")
-                video_name = " ".join(parts)
-                send_file(conn, "uploads/"+video_name, "video/mp4")
-
-            elif header['url'] == "/list":
-                list_html = generate_list_html.generate('uploads', host = header['Host'])
-                send_bytes_of_file(conn, list_html, "text/html")
-
-            elif header['url'].startswith("/watch"):
-                video_name = header['url'][len("/watch/"):]
-                video_player_html = generate_player_html.generate(video_name, host = header['Host'])
-                send_bytes_of_file(conn, video_player_html, "text/html")
-
-            elif header['url'] == "/favicon.ico":
-                send_file(conn, "favicon.ico", "image/avif")
-
-            elif header['url'] == "/":
-                index_html = generate_index_html.generate(host = header['Host'])
-                send_bytes_of_file(conn, index_html, "text/html")
-
-            else:
-                send_bytes_of_file(conn, b"404 not found", "text/html")
-
-        elif header['method'] == "POST":
-            if header['url'] == "/upload":
-                DEBUG_PRINT = False
-                content_type = parse_line_of_value(header['Content-Type'])
-                if(DEBUG_PRINT): print("Content Type Table = ",content_type)
-                if content_type['main'] == "multipart/form-data": 
-                    if(DEBUG_PRINT): print("Boundary = ",content_type['boundary'])
-                    data = get_array_of_multipart_data(body_data, content_type['boundary'])
-                    for sub_request in data:
-                        if(DEBUG_PRINT): print("sub Request = \n",sub_request,"\n\n\n")
-                        sub_header_data = get_header(sub_request)
-                        sub_body_data = get_body(sub_request)
-                        sub_header = parse_header(sub_header_data, is_sub_header=True)
-                        if(DEBUG_PRINT): print("sub Header = ",sub_header)
-                        if(DEBUG_PRINT): print("\n\n\nsub Body = ",sub_body_data)
-
-                        
-                        content_disposition = parse_line_of_value(sub_header['Content-Disposition'])
-                        if(DEBUG_PRINT): print("\n\n\ncontent_disposition = ",content_disposition)
-                        file_path = "uploads/"
-                        file_path += remove_quotes(content_disposition['filename'])
-                        with open(file_path, "wb") as file:
-                            file.write(sub_body_data)
-
-
-                        list_html = generate_list_html.generate('uploads', host = header['Host'])
-                        send_bytes_of_file(conn, list_html, "text/html")
-
-        else:
-            send_bytes_of_file(conn, b"404 not found", "text/html")
-        
-        conn.close()
+        threading.Thread(target=handle_http_request, args=(conn,addr)).start()
