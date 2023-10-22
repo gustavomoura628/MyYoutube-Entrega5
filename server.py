@@ -122,6 +122,12 @@ def handle_http_request(conn, addr):
 
     conn.close()
 
+
+
+# Make sure that uploads folder exists
+if not os.path.exists("uploads"):
+    os.makedirs("uploads")
+
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(("", PORT))
