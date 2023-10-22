@@ -4,156 +4,48 @@ import os
 import generate_player_html
 import generate_list_html
 import generate_index_html
+import generate_404_html
+
+import http_parser
 
 
 HOST = ""
 PORT = 8080
 
-def parse_header(header_data, is_sub_header = False):
-    DEBUG_PRINT = False
-    header = {}
-
-    if(not is_sub_header):
-        separator = header_data.find(b" ")
-        header['method'] = header_data[:separator].decode()
-        header_data = header_data[separator+1:]
-        if(DEBUG_PRINT): print("Method = ",header['method'])
-
-        separator = header_data.find(b" ")
-        header['url'] = header_data[:separator].decode()
-        header_data = header_data[separator+1:]
-        if(DEBUG_PRINT): print("url = ",header['url'])
-
-        separator = header_data.find(b"\r\n")
-        header['version'] = header_data[:separator].decode()
-        header_data = header_data[separator+2:]
-        if(DEBUG_PRINT): print("version = ",header['version'])
-
-    while True:
-        separator = header_data.find(b"\r\n")
-        colon = header_data.find(b": ")
-        if(DEBUG_PRINT): print("Separator = ",separator, " Colon = ",colon)
-        if(colon == -1): 
-            break
-        key = header_data[:colon].decode()
-        value = header_data[colon+2:separator].decode()
-        header[key] = value
-        header_data = header_data[separator+2:]
-        if(DEBUG_PRINT): print(key," = ",header[key])
-
-    return header
-
-
-def parse_line_of_value(line):
-    DEBUG_PRINT = False
-
-    if(DEBUG_PRINT): print("Value = ",line)
-
-    table = {}
-
-    separator = line.find("; ")
-
-    if(separator == -1):
-        table['main'] = line
-        return table
-
-    table['main'] = line[:separator]
-    line = line[separator+2:]
-
-    while True:
-        separator = line.find("; ")
-        equal = line.find("=")
-        if(DEBUG_PRINT): print("Separator = ",separator, " Equal = ",equal)
-        if(separator == -1):
-            key = line[:equal]
-            value = line[equal+1:]
-            table[key] = value
-            if(DEBUG_PRINT): print(key," = ",table[key])
-            return table
-        else:
-            key = line[:equal]
-            value = line[equal+1:separator]
-            table[key] = value
-            line = line[separator+2:]
-            if(DEBUG_PRINT): print(key," = ",table[key])
-        if(DEBUG_PRINT): print("Value = ",line)
 
 def send_bytes_of_file(conn, file_data, file_type):
-        response = "HTTP/1.1 200 OK\r\n"
-        response += "Content-Length: {}\r\n".format(len(file_data))
-        response += "Content-Type: {}\r\n".format(file_type)
-        response += "\r\n"
-        conn.sendall(response.encode())
-        conn.sendall(file_data)
+    response = "HTTP/1.1 200 OK\r\n"
+    response += "Content-Length: {}\r\n".format(len(file_data))
+    response += "Content-Type: {}\r\n".format(file_type)
+    response += "\r\n"
+    conn.sendall(response.encode())
+    conn.sendall(file_data)
 
 def send_file(conn, file_path, file_type):
+    file_length = os.path.getsize(file_path)
+
+    response = "HTTP/1.1 200 OK\r\n"
+    response += "Content-Length: {}\r\n".format(file_length)
+    response += "Content-Type: {}\r\n".format(file_type)
+    response += "\r\n"
+    conn.sendall(response.encode())
+
     with open(file_path, "rb") as file:
-        file_data = file.read()
-        send_bytes_of_file(conn, file_data, file_type)
-
-
-def get_header(request_data):
-        header_end = request_data.find(b"\r\n\r\n")+4
-        header = request_data[:header_end]
-        return header
+        while True:
+            read_bytes = file.read(2**20)
+            if not read_bytes:
+                break
+            conn.sendall(read_bytes)
 
 def get_body(request_data):
-        header_end = request_data.find(b"\r\n\r\n")+4
-        body = request_data[header_end:]
-        return body
+    header_end = request_data.find(b"\r\n\r\n")+4
+    body = request_data[header_end:]
+    return body
 
-def get_array_of_multipart_data(body, boundary):
-    boundary = bytes(boundary,'ascii')+b"\r\n"
-
-    separator = body.find(boundary)
-    body = body[separator+len(boundary):]
-
-    data = []
-    while True:
-        separator = body.find(boundary)
-
-        if(separator == -1):
-            data.append(body)
-            break
-        else:
-            data.append(body[:separator])
-
-        body = body[separator+len(boundary):]
-    return data
 
 def remove_quotes(string):
     return string[1:len(string)-1]
 
-def receive_until_header(conn):
-    request = conn.recv(2**20)
-    while True:
-        if(request.find(b"\r\n\r\n") != -1):
-            break
-        request += conn.recv(2**20)
-
-    return request
-
-def receive_until_end_of_body(conn, body_data, Content_Length):
-    Content_Length = int(Content_Length)
-    DEBUG_PRINT = False
-    if(DEBUG_PRINT): print("\n\n\nContent_Length = ",Content_Length,"\n\n\n")
-
-    request = body_data
-    while True:
-        print("Progress = {}%".format(len(request)/Content_Length*100))
-        if(DEBUG_PRINT): print("Content_Length = ",Content_Length,"Length = ",len(request))
-        if(DEBUG_PRINT): print("Content_Length type = ",type(Content_Length),"Length type = ",type(len(request)))
-        if len(request) == Content_Length:
-            if(DEBUG_PRINT): print("{} and {} ARE equal".format(len(request),Content_Length))
-            break
-        else:
-            if(DEBUG_PRINT): print("{} and {} are NOT equal".format(len(request),Content_Length))
-        if(DEBUG_PRINT): print("Blocking socket receive...")
-        request += conn.recv(1024)
-
-    if(DEBUG_PRINT): print("FINISHED RECEIVING UPLOAD!")
-
-    return request
 
 def print_dictionary(table):
     for key in table:
@@ -164,21 +56,13 @@ import threading
 def handle_http_request(conn, addr):
     print("\n\n\n")
     print(f"Connected by {addr}")
-    request = receive_until_header(conn)
+    request = http_parser.http_parser(conn)
 
-    DEBUG_PRINT = False
-
-    if(DEBUG_PRINT): print("Request until header = \n",request,"\n\n\n")
-    header_data = get_header(request)
-    header = parse_header(header_data)
+    header = request.get_header()
     print_dictionary(header)
 
-    body_data_remainder = get_body(request)
-
+    DEBUG_PRINT = False
     if(DEBUG_PRINT): print("Header = ",header)
-    #if(DEBUG_PRINT): print("\n\n\nBody = ",body_data)
-    #
-    #if(DEBUG_PRINT): print("Body Length = ",len(body_data))
 
     if header['method'] == "GET":
         if header['url'].startswith("/video"):
@@ -205,56 +89,46 @@ def handle_http_request(conn, addr):
             send_bytes_of_file(conn, index_html, "text/html")
 
         else:
-            send_bytes_of_file(conn, b"404 not found", "text/html")
-
-    elif header['method'] == "POST":
+            not_found_html = generate_404_html.generate(host = header['Host'])
+            send_bytes_of_file(conn, not_found_html, "text/html")
+    if header['method'] == "POST":
         if header['url'] == "/upload":
             DEBUG_PRINT = False
-            content_type = parse_line_of_value(header['Content-Type'])
+            content_type = http_parser.parse_line_of_value(header['Content-Type'])
             if(DEBUG_PRINT): print("Content Type Table = ",content_type)
             if content_type['main'] == "multipart/form-data": 
+                sub_header = request.get_multipart_header()
 
-                if not 'Content-Length' in header:
-                    print("ERROR: Could not find Content-Length in Header!")
-                    exit(1)
+                if(DEBUG_PRINT): print("sub Header = ",sub_header)
 
-                body_data = receive_until_end_of_body(conn, body_data_remainder, header['Content-Length'])
+                content_disposition = http_parser.parse_line_of_value(sub_header['Content-Disposition'])
+                if(DEBUG_PRINT): print("\n\n\ncontent_disposition = ",content_disposition)
+                file_path = "uploads/"
+                video_name = remove_quotes(content_disposition['filename'])
+                file_path += video_name
 
-                if(DEBUG_PRINT): print("Boundary = ",content_type['boundary'])
-                data = get_array_of_multipart_data(body_data, content_type['boundary'])
-                for sub_request in data:
-                    if(DEBUG_PRINT): print("sub Request = \n",sub_request,"\n\n\n")
-                    sub_header_data = get_header(sub_request)
-                    sub_body_data = get_body(sub_request)
-                    sub_header = parse_header(sub_header_data, is_sub_header=True)
-                    if(DEBUG_PRINT): print("sub Header = ",sub_header)
-                    if(DEBUG_PRINT): print("\n\n\nsub Body = ",sub_body_data)
+                #sub_body_data = request.get_multipart_body_data()
+                #if(DEBUG_PRINT): print("\n\n\nsub Body = ",sub_body_data)
+                #with open(file_path, "wb") as file:
+                #    file.write(sub_body_data)
+                request.write_until_content_length_to_file(file_path)
 
-                    
-                    content_disposition = parse_line_of_value(sub_header['Content-Disposition'])
-                    if(DEBUG_PRINT): print("\n\n\ncontent_disposition = ",content_disposition)
-                    file_path = "uploads/"
-                    video_name = remove_quotes(content_disposition['filename'])
-                    file_path += video_name
-                    with open(file_path, "wb") as file:
-                        file.write(sub_body_data)
-
-
-                    video_player_html = generate_player_html.generate(video_name, host = header['Host'])
-                    send_bytes_of_file(conn, video_player_html, "text/html")
+                video_player_html = generate_player_html.generate(video_name, host = header['Host'])
+                send_bytes_of_file(conn, video_player_html, "text/html")
 
     else:
-        send_bytes_of_file(conn, b"404 not found", "text/html")
-    
+        not_found_html = generate_404_html.generate(host = header['Host'])
+        send_bytes_of_file(conn, not_found_html, "text/html")
+
     conn.close()
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(("", PORT))
     s.listen()
-    
+
     print(f"Listening on {HOST}:{PORT}")
-    
+
     while True:
         conn, addr = s.accept()
         threading.Thread(target=handle_http_request, args=(conn,addr)).start()
