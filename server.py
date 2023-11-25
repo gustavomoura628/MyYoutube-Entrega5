@@ -111,7 +111,13 @@ def handle_http_request(conn, addr):
                 #if(DEBUG_PRINT): print("\n\n\nsub Body = ",sub_body_data)
                 #with open(file_path, "wb") as file:
                 #    file.write(sub_body_data)
-                request.write_until_content_length_to_file(file_path)
+                #request.write_until_content_length_to_file(file_path)
+
+                file = open(file_path, "wb")
+                for chunk in request.get_file_chunks():
+                    file.write(chunk)
+                file.close()
+
 
                 video_player_html = generate_player_html.generate(video_name, host = header['Host'])
                 send_bytes_of_file(conn, video_player_html, "text/html")

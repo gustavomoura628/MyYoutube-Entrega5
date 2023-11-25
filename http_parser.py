@@ -185,3 +185,21 @@ class http_parser:
             self.bytes_read_from_body += len(received_bytes)
 
         file.close()
+
+    def get_file_chunks(self):
+        #the same as write_until_content_length_to_file but with a generator
+        if not 'Content-Length' in self.header:
+            print("ERROR: Could not find Content-Length in Header!")
+            exit(1)
+        content_length = int(self.header['Content-Length'])
+
+        yield self.buffer
+
+        while True:
+            if(self.bytes_read_from_body == content_length):
+                self.eof = True
+                break
+
+            received_bytes = self.conn.recv(2**20)
+            yield received_bytes
+            self.bytes_read_from_body += len(received_bytes)
