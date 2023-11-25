@@ -6,6 +6,8 @@ import generate_list_html
 import generate_index_html
 import generate_404_html
 
+import pickle
+
 import http_parser
 
 
@@ -53,6 +55,21 @@ def print_dictionary(table):
 
 import threading
 
+
+def get_list_from_database():
+    # Asking list to database
+    database_s = socket.socket()
+    database_s.connect(('localhost', 8081))
+
+    database_s.sendall("GET /list HTTP/1.1 200 OK\r\n".encode())
+    database_s.sendall("\r\n".encode())
+
+    database_response = http_parser.http_parser(database_s)
+    database_header = database_response.get_header()
+
+    list = pickle.loads(database_response.read_until_content_length())
+    return list
+
 def handle_http_request(conn, addr):
     print("\n\n\n")
     print(f"Connected by {addr}")
@@ -66,20 +83,57 @@ def handle_http_request(conn, addr):
 
     if header['method'] == "GET":
         if header['url'].startswith("/video"):
-            video_name = header['url'][len("/video/"):]
-            # Replace %20 with spaces
-            parts = video_name.split("%20")
-            video_name = " ".join(parts)
-            send_file(conn, "uploads/"+video_name, "video/mp4")
+            video_id = header['url'][len("/video/"):]
+
+            # Asking file to database
+            database_s = socket.socket()
+            database_s.connect(('localhost', 8081))
+
+            database_s.sendall("GET /file HTTP/1.1 200 OK\r\n".encode())
+            database_s.sendall("id: {}\r\n".format(video_id).encode())
+            database_s.sendall("\r\n".encode())
+
+            database_response = http_parser.http_parser(database_s)
+            database_header = database_response.get_header()
+
+
+            file_length = database_header['Content-Length']
+
+            # Returning file to client
+            conn.sendall("HTTP/1.1 200 OK\r\n".encode())
+            conn.sendall("Content-Length: {}\r\n".format(file_length).encode())
+            conn.sendall("Content-Type: {}\r\n".format("video/mp4").encode())
+            conn.sendall("\r\n".encode())
+            for chunk in database_response.get_file_chunks():
+                conn.sendall(chunk)
 
         elif header['url'] == "/list":
-            list_html = generate_list_html.generate('uploads', host = header['Host'])
+            list = get_list_from_database()
+
+            list_html = generate_list_html.generate(list, host = header['Host'])
             send_bytes_of_file(conn, list_html, "text/html")
 
         elif header['url'].startswith("/watch"):
-            video_name = header['url'][len("/watch/"):]
-            video_player_html = generate_player_html.generate(video_name, host = header['Host'])
+            video_id = header['url'][len("/watch/"):]
+            #TODO: get video metadata
+            video_player_html = generate_player_html.generate(video_id, video_id, host = header['Host'])
             send_bytes_of_file(conn, video_player_html, "text/html")
+
+        elif header['url'].startswith("/delete"):
+            video_id = header['url'][len("/delete/"):]
+            # Asking deletion to database
+            database_s = socket.socket()
+            database_s.connect(('localhost', 8081))
+
+            database_s.sendall("GET /delete HTTP/1.1 200 OK\r\n".encode())
+            database_s.sendall("id: {}\r\n".format(video_id).encode())
+            database_s.sendall("\r\n".encode())
+
+            #TODO: show deleted confirmation metadata
+            list = get_list_from_database()
+
+            list_html = generate_list_html.generate(list, host = header['Host'])
+            send_bytes_of_file(conn, list_html, "text/html")
 
         elif header['url'] == "/favicon.ico":
             send_file(conn, "favicon.ico", "image/avif")
@@ -93,7 +147,7 @@ def handle_http_request(conn, addr):
             send_bytes_of_file(conn, not_found_html, "text/html")
     if header['method'] == "POST":
         if header['url'] == "/upload":
-            DEBUG_PRINT = False
+            DEBUG_PRINT = True
             content_type = http_parser.parse_line_of_value(header['Content-Type'])
             if(DEBUG_PRINT): print("Content Type Table = ",content_type)
             if content_type['main'] == "multipart/form-data": 
@@ -103,23 +157,32 @@ def handle_http_request(conn, addr):
 
                 content_disposition = http_parser.parse_line_of_value(sub_header['Content-Disposition'])
                 if(DEBUG_PRINT): print("\n\n\ncontent_disposition = ",content_disposition)
-                file_path = "uploads/"
                 video_name = remove_quotes(content_disposition['filename'])
-                file_path += video_name
 
-                #sub_body_data = request.get_multipart_body_data()
-                #if(DEBUG_PRINT): print("\n\n\nsub Body = ",sub_body_data)
-                #with open(file_path, "wb") as file:
-                #    file.write(sub_body_data)
-                #request.write_until_content_length_to_file(file_path)
+                file_length = request.get_content_length_of_file()
 
-                file = open(file_path, "wb")
+                # Sending file to database
+                database_s = socket.socket()
+                database_s.connect(('localhost', 8081))
+
+                database_s.sendall("POST /upload HTTP/1.1 200 OK\r\n".encode())
+                database_s.sendall("Content-Length: {}\r\n".format(file_length).encode())
+                database_s.sendall("name: {}\r\n".format(video_name).encode())
+                #database_s.sendall("size: {}\r\n".format(file_length).encode()) #doesnt work??
+                database_s.sendall("\r\n".encode())
+
+                actual_content_length = 0
                 for chunk in request.get_file_chunks():
-                    file.write(chunk)
-                file.close()
+                    database_s.sendall(chunk)
+                    actual_content_length += len(chunk)
 
+                database_response = http_parser.http_parser(database_s)
+                database_header = database_response.get_header()
+                print_dictionary(database_header)
 
-                video_player_html = generate_player_html.generate(video_name, host = header['Host'])
+                video_id = database_header['id']
+
+                video_player_html = generate_player_html.generate(video_id, video_name, host = header['Host'])
                 send_bytes_of_file(conn, video_player_html, "text/html")
 
     else:

@@ -1,15 +1,7 @@
 import os
 
-def generate(directory_path, host = "localhost:8080"):
+def generate(list, host = "localhost:8080"):
     base_url = "http://" + host + "/"
-
-    # Verify that the given directory exists
-    if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
-        print(f"Directory '{directory_path}' does not exist.")
-        return
-
-    # List all files in the directory
-    files = os.listdir(directory_path)
 
     html_content = """<!DOCTYPE html>
 <html>
@@ -83,13 +75,10 @@ def generate(directory_path, host = "localhost:8080"):
     """.format(base_url)
 
     # Create clickable links for each file with custom URLs
-    for file in files:
-        file_path = os.path.join(directory_path, file)
-        if os.path.isfile(file_path):
-            file_name = file
-            file_url = base_url + "watch/" + file_name
-            file_link = f'<a href="{file_url}" class="file-link"><button class="file-link-button">{file_name}</button></a>'
-            html_content += f'<li>{file_link}</li>\n'
+    for id,name in list.items():
+        url = base_url + "watch/" + id
+        file_link = f'<a href="{url}" class="file-link"><button class="file-link-button">{name}</button></a>'
+        html_content += f'<li>{file_link}</li>\n'
 
     # Close the HTML file
     html_content += '</ul>\n</body>\n</html>'
