@@ -5,6 +5,7 @@ import generate_player_html
 import generate_list_html
 import generate_index_html
 import generate_404_html
+import search
 
 import pickle
 
@@ -68,7 +69,25 @@ def get_list_from_database():
     database_header = database_response.get_header()
 
     list = pickle.loads(database_response.read_until_content_length())
+    database_s.close()
     return list
+
+def get_metadata_from_database(id):
+    # Asking list to database
+    database_s = socket.socket()
+    database_s.connect(('localhost', 8081))
+
+    database_s.sendall("GET /metadata HTTP/1.1 200 OK\r\n".encode())
+    database_s.sendall("id: {}\r\n".format(id).encode())
+    database_s.sendall("\r\n".encode())
+
+    database_response = http_parser.http_parser(database_s)
+    database_header = database_response.get_header()
+
+    metadata = pickle.loads(database_response.read_until_content_length())
+    database_s.close()
+
+    return metadata
 
 def handle_http_request(conn, addr):
     print("\n\n\n")
@@ -115,9 +134,31 @@ def handle_http_request(conn, addr):
 
         elif header['url'].startswith("/watch"):
             video_id = header['url'][len("/watch/"):]
+
+            metadata = get_metadata_from_database(video_id)
+
             #TODO: get video metadata
-            video_player_html = generate_player_html.generate(video_id, video_id, host = header['Host'])
+            video_player_html = generate_player_html.generate(video_id, metadata['name'], host = header['Host'])
             send_bytes_of_file(conn, video_player_html, "text/html")
+
+        elif header['url'].startswith("/search"):
+            search_query = header['url'][len("/search?query="):]
+            import re
+            search_query = re.sub(r"%[0-9]*", " ", search_query)
+
+
+            list = get_list_from_database()
+            matches = search.search_strings(list, search_query)
+            list_matches = {}
+            for id in matches:
+                list_matches[id] = list[id]
+
+            print("Results = ",list)
+
+            list_html = generate_list_html.generate(list_matches, host = header['Host'])
+            send_bytes_of_file(conn, list_html, "text/html")
+
+
 
         elif header['url'].startswith("/delete"):
             video_id = header['url'][len("/delete/"):]

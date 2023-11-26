@@ -141,6 +141,20 @@ def handle_http_request(conn,addr):
             conn.sendall(list_string)
 
     if header['method'] == "GET":
+        if header['url'] == "/metadata":
+            id = header['id']
+            print("metadata id: ",id)
+            metadata_string = pickle.dumps(metadata[id])
+            print("metadata_string: ",metadata_string)
+            file_length = len(metadata_string)
+
+            conn.sendall("POST /metadata HTTP/1.1 200 OK\r\n".encode())
+            conn.sendall("Content-Length: {}\r\n".format(file_length).encode())
+            conn.sendall("\r\n".encode())
+
+            conn.sendall(metadata_string)
+
+    if header['method'] == "GET":
         if header['url'] == "/delete":
             id = header['id']
             delete(id)

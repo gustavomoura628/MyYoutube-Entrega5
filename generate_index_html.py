@@ -125,6 +125,15 @@ def generate(host = "localhost:8080"):
       </form>
     </div>
 
+    <!-- Search Form -->
+    <div class="form-container">
+      <form action="{}search" method="GET">
+        <h2>Search</h2>
+        <input type="text" name="query" placeholder="Search videos..." required>
+        <button class="upload-button" type="submit">Search</button>
+      </form>
+    </div>
+
     <!-- Show Video List Button and Container -->
     <div class="button-container">
       <h2>Show Video List</h2>
@@ -140,5 +149,5 @@ def generate(host = "localhost:8080"):
   </script>
 </body>
 </html>"""
-    html_content = html_content.format(base_url, base_url)
+    html_content = html_content.format(base_url, base_url, base_url)
     return bytes(html_content, 'ascii')
