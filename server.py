@@ -170,6 +170,10 @@ def handle_http_request(conn, addr):
             database_s.sendall("id: {}\r\n".format(video_id).encode())
             database_s.sendall("\r\n".encode())
 
+            # Wait for response to make sure it's deleted
+            database_response = http_parser.http_parser(database_s)
+            database_header = database_response.get_header()
+
             #TODO: show deleted confirmation metadata
             list = get_list_from_database()
 

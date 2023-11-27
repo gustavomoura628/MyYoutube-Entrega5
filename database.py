@@ -57,6 +57,22 @@ def uploadTo(datanode, id, file_length, file_generator):
     for chunk in file_generator:
         datanode_s.sendall(chunk)
 
+def uploadToMultiple(datanodes, id, file_length, file_generator):
+    # Sending file to datanode
+    datanode_s_list = []
+    for i, datanode in enumerate(datanodes):
+        datanode_s_list.append(socket.socket())
+        datanode_s_list[i].connect(datanode)
+
+        datanode_s_list[i].sendall("POST /upload HTTP/1.1 200 OK\r\n".encode())
+        datanode_s_list[i].sendall("Content-Length: {}\r\n".format(file_length).encode())
+        datanode_s_list[i].sendall("id: {}\r\n".format(id).encode())
+        datanode_s_list[i].sendall("\r\n".encode())
+
+    for chunk in file_generator:
+        for datanode_s in datanode_s_list:
+            datanode_s.sendall(chunk)
+
 def downloadFrom(datanode, id):
         # Asking file to datanode
         datanode_s = socket.socket()
@@ -89,12 +105,25 @@ def upload(file_metadata, file_length, file_generator):
     id = genId()
     metadata[id] = file_metadata
 
-    datanode = random.choice(datanode_list)
-    metadata[id]['datanode_list'] = [datanode]
+    replication_factor = 3
+
+    # error handling
+    if len(datanode_list) == 0:
+        print("ERROR: NO DATANODES CONFIGURED")
+    elif len(datanode_list) < replication_factor:
+        print("ERROR: NOT ENOUGH DATANODES FOR REPLICATION FACTOR")
+        exit(1)
+
+    datanodes = random.sample(datanode_list, replication_factor)
+    uploadToMultiple(datanodes, id, file_length, file_generator)
+    for datanode in datanodes:
+        if not 'datanode_list' in metadata[id]:
+            metadata[id]['datanode_list'] = []
+
+        metadata[id]['datanode_list'].append(datanode)
 
     updateMetadataFile()
 
-    uploadTo(datanode, id, file_length, file_generator)
 
     print("Uploaded")
 
@@ -188,6 +217,10 @@ def handle_http_request(conn,addr):
         if header['url'] == "/delete":
             id = header['id']
             delete(id)
+
+            conn.sendall("POST /delete HTTP/1.1 200 OK\r\n".encode())
+            conn.sendall("\r\n".encode())
+
 
     if header['method'] == "POST":
         if header['url'] == "/upload":
