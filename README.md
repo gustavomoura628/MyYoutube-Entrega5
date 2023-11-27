@@ -12,3 +12,4 @@ For how it works, please read the [Documentation](MyYoutube%20-%20Entrega%202.pd
 ![](screenshot_2.png)  
 ![](screenshot_1.png)  
 ![](screenshot_0.png)  
+![](architecture.png)  
