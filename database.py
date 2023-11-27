@@ -2,6 +2,7 @@
 import uuid
 import os
 import pickle
+import random
 
 def printDictionary(dictionary):
     for k,v in dictionary.items():
@@ -18,14 +19,14 @@ if os.path.exists("metadata_pickle.pyc"):
 
 printDictionary(metadata)
 
-# Assert that the folder files exists
-if os.path.isdir("files"):
-    pass
-elif os.path.exists("files"):
-    print("ERROR: 'files' FOLDER COULD NOT BE CREATED BECAUSE A FILE EXISTS WITH THE SAME NAME")
-    exit(1)
-else:
-    os.makedirs("files")
+datanode_list = []
+
+datanode_file = open('datanodes.txt', 'r')
+for line in datanode_file.readlines():
+    ip, port = line.strip().split(' ')
+    datanode_list.append((ip,int(port)))
+
+print("datanode list = ",datanode_list)
 
 def updateMetadataFile():
     metadata_pickle = open("metadata_pickle.pyc", "wb")
@@ -42,19 +43,58 @@ def genId():
         id = str(uuid.uuid4())
     return id
 
-def upload(file_metadata, file_generator):
+
+def uploadTo(datanode, id, file_length, file_generator):
+    # Sending file to datanode
+    datanode_s = socket.socket()
+    datanode_s.connect(datanode)
+
+    datanode_s.sendall("POST /upload HTTP/1.1 200 OK\r\n".encode())
+    datanode_s.sendall("Content-Length: {}\r\n".format(file_length).encode())
+    datanode_s.sendall("id: {}\r\n".format(id).encode())
+    datanode_s.sendall("\r\n".encode())
+
+    for chunk in file_generator:
+        datanode_s.sendall(chunk)
+
+def downloadFrom(datanode, id):
+        # Asking file to datanode
+        datanode_s = socket.socket()
+        datanode_s.connect(datanode)
+
+        datanode_s.sendall("GET /file HTTP/1.1 200 OK\r\n".encode())
+        datanode_s.sendall("id: {}\r\n".format(id).encode())
+        datanode_s.sendall("\r\n".encode())
+
+        datanode_response = http_parser.http_parser(datanode_s)
+        datanode_header = datanode_response.get_header()
+
+        for chunk in datanode_response.get_file_chunks():
+            yield chunk
+
+def deleteFrom(datanode, id):
+    # Asking deletion to datanode
+    datanode_s = socket.socket()
+    datanode_s.connect(datanode)
+
+    datanode_s.sendall("GET /delete HTTP/1.1 200 OK\r\n".encode())
+    datanode_s.sendall("id: {}\r\n".format(id).encode())
+    datanode_s.sendall("\r\n".encode())
+
+def upload(file_metadata, file_length, file_generator):
     print("Uploading")
     printDictionary(file_metadata)
 
     # metadata has the format: { name: "Name" }
     id = genId()
     metadata[id] = file_metadata
+
+    datanode = random.choice(datanode_list)
+    metadata[id]['datanode_list'] = [datanode]
+
     updateMetadataFile()
 
-    file = open("files/{}".format(id), "wb")
-    for chunk in file_generator:
-        file.write(chunk)
-    file.close()
+    uploadTo(datanode, id, file_length, file_generator)
 
     print("Uploaded")
 
@@ -63,30 +103,20 @@ def upload(file_metadata, file_generator):
 
 # returns a generator
 def download(id):
-    file = open("files/{}".format(id), "rb")
-    while True:
-        chunk = file.read(2**20)
-        if not chunk:
-            break
-        yield chunk
-    file.close()
+    datanode = random.choice(metadata[id]['datanode_list'])
+    return downloadFrom(datanode, id)
 
 # deletes file
 def delete(id):
+    for datanode in metadata[id]['datanode_list']:
+        deleteFrom(datanode, id)
+
     metadata.pop(id)
+
     updateMetadataFile()
 
-    os.remove("files/{}".format(id))
-
 def getLength(id):
-    file_length = os.path.getsize("files/{}".format(id))
-    return file_length
-
-#def uploadTo(datanode, Id):
-#    pass
-#
-#def downloadFrom(datanode, Id):
-#    pass
+    return metadata[id]['size']
 
 def getList():
     list = {}
@@ -162,7 +192,8 @@ def handle_http_request(conn,addr):
     if header['method'] == "POST":
         if header['url'] == "/upload":
             print("File name = ",header['name'])
-            id = upload({ 'name': header['name'] }, request.get_file_chunks())
+            file_length = header['Content-Length']
+            id = upload({ 'name': header['name'], 'size': header['Content-Length'] }, file_length, request.get_file_chunks())
 
             print("Sending response to application")
             conn.sendall("POST /id HTTP/1.1 200 OK\r\n".encode())
