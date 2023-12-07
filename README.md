@@ -8,7 +8,7 @@ After starting all datanodes, add their ip and port to datanodes.txt in the comp
 
 Now open http://localhost:8080 on your browser.  
 
-For how it works, please read the [Documentation](MyYoutube%20-%20Entrega%202.pdf)
+For how it works, please read the [Documentation](MyYoutube%20-%20Entrega%202.pdf) or the [Presentation](MyYoutube%20-%20Entrega%202%20-%20Slides.pdf)
 ![](screenshot_2.png)  
 ![](screenshot_1.png)  
 ![](screenshot_0.png)  
