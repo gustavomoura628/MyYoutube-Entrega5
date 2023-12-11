@@ -1,5 +1,3 @@
-import os
-
 def generate(list, host = "localhost:8080"):
     base_url = "http://" + host + "/"
 

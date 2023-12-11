@@ -1,3 +1,6 @@
+import rpyc
+database = rpyc.connect_by_service("Database").root
+
 import socket
 import os
 
@@ -6,8 +9,6 @@ import generate_list_html
 import generate_index_html
 import generate_404_html
 import search
-
-import pickle
 
 import http_parser
 
@@ -56,39 +57,6 @@ def print_dictionary(table):
 
 import threading
 
-
-def get_list_from_database():
-    # Asking list to database
-    database_s = socket.socket()
-    database_s.connect(('localhost', 8081))
-
-    database_s.sendall("GET /list HTTP/1.1 200 OK\r\n".encode())
-    database_s.sendall("\r\n".encode())
-
-    database_response = http_parser.http_parser(database_s)
-    database_header = database_response.get_header()
-
-    list = pickle.loads(database_response.read_until_content_length())
-    database_s.close()
-    return list
-
-def get_metadata_from_database(id):
-    # Asking list to database
-    database_s = socket.socket()
-    database_s.connect(('localhost', 8081))
-
-    database_s.sendall("GET /metadata HTTP/1.1 200 OK\r\n".encode())
-    database_s.sendall("id: {}\r\n".format(id).encode())
-    database_s.sendall("\r\n".encode())
-
-    database_response = http_parser.http_parser(database_s)
-    database_header = database_response.get_header()
-
-    metadata = pickle.loads(database_response.read_until_content_length())
-    database_s.close()
-
-    return metadata
-
 def handle_http_request(conn, addr):
     print("\n\n\n")
     print(f"Connected by {addr}")
@@ -104,30 +72,19 @@ def handle_http_request(conn, addr):
         if header['url'].startswith("/video"):
             video_id = header['url'][len("/video/"):]
 
-            # Asking file to database
-            database_s = socket.socket()
-            database_s.connect(('localhost', 8081))
-
-            database_s.sendall("GET /file HTTP/1.1 200 OK\r\n".encode())
-            database_s.sendall("id: {}\r\n".format(video_id).encode())
-            database_s.sendall("\r\n".encode())
-
-            database_response = http_parser.http_parser(database_s)
-            database_header = database_response.get_header()
-
-
-            file_length = database_header['Content-Length']
+            file_length = database.metadata(video_id)['size']
 
             # Returning file to client
             conn.sendall("HTTP/1.1 200 OK\r\n".encode())
             conn.sendall("Content-Length: {}\r\n".format(file_length).encode())
             conn.sendall("Content-Type: {}\r\n".format("video/mp4").encode())
             conn.sendall("\r\n".encode())
-            for chunk in database_response.get_file_chunks():
+
+            for chunk in database.file(video_id):
                 conn.sendall(chunk)
 
         elif header['url'] == "/list":
-            list = get_list_from_database()
+            list = database.list()
 
             list_html = generate_list_html.generate(list, host = header['Host'])
             send_bytes_of_file(conn, list_html, "text/html")
@@ -135,7 +92,7 @@ def handle_http_request(conn, addr):
         elif header['url'].startswith("/watch"):
             video_id = header['url'][len("/watch/"):]
 
-            metadata = get_metadata_from_database(video_id)
+            metadata = database.metadata(video_id)
 
             #TODO: get video metadata
             video_player_html = generate_player_html.generate(video_id, metadata['name'], host = header['Host'])
@@ -147,7 +104,7 @@ def handle_http_request(conn, addr):
             search_query = re.sub(r"%[0-9]*", " ", search_query)
 
 
-            list = get_list_from_database()
+            list = database.list()
             matches = search.search_strings(list, search_query)
             list_matches = {}
             for id in matches:
@@ -162,20 +119,8 @@ def handle_http_request(conn, addr):
 
         elif header['url'].startswith("/delete"):
             video_id = header['url'][len("/delete/"):]
-            # Asking deletion to database
-            database_s = socket.socket()
-            database_s.connect(('localhost', 8081))
-
-            database_s.sendall("GET /delete HTTP/1.1 200 OK\r\n".encode())
-            database_s.sendall("id: {}\r\n".format(video_id).encode())
-            database_s.sendall("\r\n".encode())
-
-            # Wait for response to make sure it's deleted
-            database_response = http_parser.http_parser(database_s)
-            database_header = database_response.get_header()
-
-            #TODO: show deleted confirmation metadata
-            list = get_list_from_database()
+            database.delete(video_id)
+            list = database.list()
 
             list_html = generate_list_html.generate(list, host = header['Host'])
             send_bytes_of_file(conn, list_html, "text/html")
@@ -206,26 +151,8 @@ def handle_http_request(conn, addr):
 
                 file_length = request.get_content_length_of_file()
 
-                # Sending file to database
-                database_s = socket.socket()
-                database_s.connect(('localhost', 8081))
+                video_id = database.upload(video_name, file_length, request.get_file_chunks())
 
-                database_s.sendall("POST /upload HTTP/1.1 200 OK\r\n".encode())
-                database_s.sendall("Content-Length: {}\r\n".format(file_length).encode())
-                database_s.sendall("name: {}\r\n".format(video_name).encode())
-                #database_s.sendall("size: {}\r\n".format(file_length).encode()) #doesnt work??
-                database_s.sendall("\r\n".encode())
-
-                actual_content_length = 0
-                for chunk in request.get_file_chunks():
-                    database_s.sendall(chunk)
-                    actual_content_length += len(chunk)
-
-                database_response = http_parser.http_parser(database_s)
-                database_header = database_response.get_header()
-                print_dictionary(database_header)
-
-                video_id = database_header['id']
 
                 video_player_html = generate_player_html.generate(video_id, video_name, host = header['Host'])
                 send_bytes_of_file(conn, video_player_html, "text/html")
@@ -237,10 +164,6 @@ def handle_http_request(conn, addr):
     conn.close()
 
 
-
-# Make sure that uploads folder exists
-if not os.path.exists("uploads"):
-    os.makedirs("uploads")
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
