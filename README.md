@@ -1,4 +1,5 @@
-# MyYoutube Stage 2
+# MyYoutube Stage 3
+README IS LYING, PLEASE WAIT FOR NEW README AFTER NEW VERSION IS FINISHED!  
 A distributed video platform written using only sockets.  
 To start, run `python application.py`  
 Then run `python database.py`  
