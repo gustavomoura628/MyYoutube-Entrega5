@@ -1,5 +1,7 @@
+#import rpyc
+#datanode = rpyc.connect_by_service("Datanode").root
 import rpyc
-datanode = rpyc.connect_by_service("Datanode").root
+monitor = rpyc.connect_by_service("Monitor").root
 
 #distributed database
 import uuid
@@ -47,23 +49,63 @@ def upload(file_metadata, file_generator):
     id = genId()
     metadata[id] = file_metadata
 
-    #REMOTE SERVICE CALL
-    datanode.upload(id, file_generator)
+    replication_factor = 3
+    datanode_list = monitor.list()
+    
+    # error handling
+    if len(datanode_list) == 0:
+        print("ERROR: NO DATANODES ALIVE")
+    elif len(datanode_list) < replication_factor:
+        print("ERROR: NOT ENOUGH DATANODES ALIVE FOR REPLICATION FACTOR")
+        exit(1)
+
+    datanodes = random.sample(datanode_list, replication_factor)
+    file_descriptors = []
+    for datanode in datanodes:
+        print(f'Uploading from {datanode}')
+        #REMOTE SERVICE CALL
+        datanode_ip, datanode_port = datanode.split(":")
+        datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+        file_descriptors.append(datanode_service.getWriteFileProxy(id))
+
+        ##TODO: THIS BREAKS EVERYTHING
+        #datanode_service.upload(id, file_generator)
+
+        if not 'datanode_list' in metadata[id]:
+            metadata[id]['datanode_list'] = []
+        metadata[id]['datanode_list'].append(datanode)
+
+    for chunk in file_generator:
+        for file in file_descriptors:
+            file.write(chunk)
+
+    for file in file_descriptors:
+        file.close()
 
     updateMetadataFile()
-
     print("Uploaded")
-
     return id
 
 
 # returns a generator
 def download(id):
-    return datanode.file(id)
+    list = metadata[id]['datanode_list']
+    print(f'list = {list}')
+    aliveList = monitor.aliveFromList(list)
+    print(f'alivelist = {aliveList}')
+    datanode = random.choice(aliveList)
+    print(f'Downloading from {datanode}')
+    datanode_ip, datanode_port = datanode.split(":")
+    datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+    return datanode_service.file(id)
 
 # deletes file
 def delete(id):
-    datanode.delete(id)
+    for datanode in metadata[id]['datanode_list']:
+        print(f'Deleting from {datanode}')
+        datanode_ip, datanode_port = datanode.split(":")
+        datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+        datanode_service.delete(id)
 
     metadata.pop(id)
 

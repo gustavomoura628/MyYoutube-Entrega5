@@ -11,6 +11,19 @@ else:
     os.makedirs("files")
 
 import rpyc
+
+monitor = rpyc.connect_by_service("Monitor").root
+PORT = 8090
+monitor.register(PORT)
+
+class FileProxy():
+    def __init__(self, path, arg):
+        self.file_descriptor = open(path, arg)
+    def write(self, data):
+        self.file_descriptor.write(data)
+    def close(self):
+        self.file_descriptor.close()
+
 class DatanodeService(rpyc.Service):
     def on_connect(self, conn):
         pass
@@ -25,6 +38,10 @@ class DatanodeService(rpyc.Service):
 
     def exposed_upload(self, id, chunk_generator):
         return upload(id, chunk_generator)
+
+    def exposed_getWriteFileProxy(self, id):
+        print("Getting Write File Proxy {}".format(id))
+        return FileProxy("files/{}".format(id), "wb")
 
 def file(id):
     print("Downloading {}".format(id))
@@ -50,8 +67,22 @@ def upload(id, chunk_generator):
 
     return id
 
+
+import threading
+import time
+
+def periodicallyPingMonitor():
+    while True:
+        monitor.ping(PORT)
+        time.sleep(7)
+
+
 # Initialize remote object server and register it to name service
 if __name__ == "__main__":
+    periodicallyPingMonitorThread = threading.Thread(target=periodicallyPingMonitor)
+    periodicallyPingMonitorThread.start()
+
     from rpyc.utils.server import ThreadedServer
-    t = ThreadedServer(DatanodeService, port=8090, auto_register=True)
+
+    t = ThreadedServer(DatanodeService, port=PORT, auto_register=True, protocol_config = {"allow_public_attrs" : True})
     t.start()
