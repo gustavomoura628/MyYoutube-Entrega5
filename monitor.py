@@ -4,7 +4,7 @@ import os
 import rpyc
 class MonitorService(rpyc.Service):
     def on_connect(self, conn):
-        addr, port = conn._channel.stream.sock.getsockname()
+        addr, port = conn._channel.stream.sock.getpeername()
         self.addr = addr
         self.port = port
         print("Address = ",addr," Port = ", port)
