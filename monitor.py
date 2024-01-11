@@ -12,19 +12,25 @@ class MonitorService(rpyc.Service):
     def on_disconnect(self, conn):
         pass
 
+    # Registers Node for monitoring
     def exposed_register(self, clientServicePort):
         register(self.addr, clientServicePort)
         print("Address = ",self.addr," Port = ", clientServicePort)
 
+    # Alerts monitoring service that the Node is still alive
     def exposed_ping(self, clientServicePort):
         ping(self.addr, clientServicePort)
         print("Address = ",self.addr," Port = ", clientServicePort)
     
+    # List of all Nodes currently alive
     def exposed_list(self):
         return list()
 
+    # Checks if Node is alive
     def exposed_isAlive(self, address):
         return isAlive(address)
+
+    # Receives a list of Nodes and returns its subset of all Nodes alive
     def exposed_aliveFromList(self, list):
         return aliveFromList(list)
 
