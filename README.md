@@ -1,6 +1,6 @@
 # MyYoutube Stage 3
-A distributed video platform written using rpyc.
-To start, run `rpyc_registry`
+A distributed video platform written using rpyc.  
+To start, run `rpyc_registry`  
 Then run `python monitor.py`  
 Then run `python database.py`  
 Then run `python application.py`  
