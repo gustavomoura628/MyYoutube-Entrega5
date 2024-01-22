@@ -1,14 +1,18 @@
 #!/bin/expect
 
+exp_internal 1
+
 spawn ./test.sh
 
 expect {
     "3=5" {
         send "NOOOO\r"
-        exp_continue
     }
     "2+2=4" {
         send "YES\r"
-        exp_continue
     }
 }
+expect "final words?"
+send "echo helloooooo\r"
+
+interact

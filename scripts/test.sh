@@ -13,3 +13,7 @@ fi
 read response
 
 echo Your response = $response
+
+echo final words?
+read response
+echo your final words = $response

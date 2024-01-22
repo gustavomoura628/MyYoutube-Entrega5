@@ -1,5 +1,7 @@
 #!/bin/expect
 
+exp_internal 1
+
 # Set the variables
 set username "aluno"
 set hostname "192.168.40.68"
@@ -15,15 +17,13 @@ close $script_file
 spawn ssh $username@$hostname
 
 expect {
-    "Are you sure" {
+    "you sure" {
         send "yes\r"
         expect "sword:"
         send "$password\r"
-        exp_continue
     }
     "sword:" {
         send "$password\r"
-        exp_continue
     }
 }
 
