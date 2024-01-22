@@ -1,0 +1,30 @@
+#!/bin/expect
+
+# Set the variables
+set username "aluno"
+set hostname "192.168.12.1"
+set password "aula321"
+
+set script_path "install.sh"
+set script_file [open "$script_path" r]
+set script_content [read $script_file]
+close $script_file
+
+# Spawn the SSH process
+spawn ssh $username@$hostname
+
+# Expect the password prompt
+expect "?*sword:"
+
+# Send the password
+send "$password\r"
+
+
+
+expect "?*$?*"
+send "$script_content"
+
+# Wait for the command to complete
+expect eof
+
+interact

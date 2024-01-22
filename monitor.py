@@ -23,8 +23,8 @@ class MonitorService(rpyc.Service):
         print("Address = ",self.addr," Port = ", clientServicePort)
     
     # List of all Nodes currently alive
-    def exposed_list(self):
-        return list()
+    def exposed_list_alive(self):
+        return list_alive()
 
     # Checks if Node is alive
     def exposed_isAlive(self, address):
@@ -66,7 +66,7 @@ def isAlive(address):
         return True
     return False
 
-def list():
+def list_alive():
     list = []
     for address in hosts_data:
         if isAlive(address):

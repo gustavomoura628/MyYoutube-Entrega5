@@ -57,6 +57,8 @@ def print_dictionary(table):
 
 import threading
 
+import time
+
 def handle_http_request(conn, addr):
     print("\n\n\n")
     print(f"Connected by {addr}")
@@ -70,6 +72,7 @@ def handle_http_request(conn, addr):
 
     if header['method'] == "GET":
         if header['url'].startswith("/video"):
+            print(f'/video request')
             video_id = header['url'][len("/video/"):]
 
             file_length = database.metadata(video_id)['size']
@@ -80,16 +83,26 @@ def handle_http_request(conn, addr):
             conn.sendall("Content-Type: {}\r\n".format("video/mp4").encode())
             conn.sendall("\r\n".encode())
 
+            
+
+            start_time = time.time()
             for chunk in database.file(video_id):
                 conn.sendall(chunk)
+            total_time = time.time() - start_time
+
+            video_name = database.metadata(video_id)['name']
+
+            print(f'Time to send "{video_name}": {total_time} seconds')
 
         elif header['url'] == "/list":
+            print(f'/list request')
             list = database.list()
 
             list_html = generate_list_html.generate(list, host = header['Host'])
             send_bytes_of_file(conn, list_html, "text/html")
 
         elif header['url'].startswith("/watch"):
+            print(f'/watch request')
             video_id = header['url'][len("/watch/"):]
 
             metadata = database.metadata(video_id)
@@ -99,6 +112,7 @@ def handle_http_request(conn, addr):
             send_bytes_of_file(conn, video_player_html, "text/html")
 
         elif header['url'].startswith("/search"):
+            print(f'/search request')
             search_query = header['url'][len("/search?query="):]
             import re
             search_query = re.sub(r"%[0-9]*", " ", search_query)
@@ -118,6 +132,7 @@ def handle_http_request(conn, addr):
 
 
         elif header['url'].startswith("/delete"):
+            print(f'/delete request')
             video_id = header['url'][len("/delete/"):]
             database.delete(video_id)
             list = database.list()
@@ -126,17 +141,20 @@ def handle_http_request(conn, addr):
             send_bytes_of_file(conn, list_html, "text/html")
 
         elif header['url'] == "/favicon.ico":
+            print(f'/favicon.ico request')
             send_file(conn, "favicon.ico", "image/avif")
 
         elif header['url'] == "/":
+            print(f'/ request')
             index_html = generate_index_html.generate(host = header['Host'])
             send_bytes_of_file(conn, index_html, "text/html")
 
         else:
             not_found_html = generate_404_html.generate(host = header['Host'])
             send_bytes_of_file(conn, not_found_html, "text/html")
-    if header['method'] == "POST":
+    elif header['method'] == "POST":
         if header['url'] == "/upload":
+            print(f'/upload request')
             DEBUG_PRINT = True
             content_type = http_parser.parse_line_of_value(header['Content-Type'])
             if(DEBUG_PRINT): print("Content Type Table = ",content_type)
@@ -151,13 +169,17 @@ def handle_http_request(conn, addr):
 
                 file_length = request.get_content_length_of_file()
 
+                start_time = time.time()
                 video_id = database.upload(video_name, file_length, request.get_file_chunks())
+                total_time = time.time() - start_time
+                print(f'Time to upload "{video_name}": {total_time} seconds')
 
 
                 video_player_html = generate_player_html.generate(video_id, video_name, host = header['Host'])
                 send_bytes_of_file(conn, video_player_html, "text/html")
 
     else:
+        print(f'invalid request')
         not_found_html = generate_404_html.generate(host = header['Host'])
         send_bytes_of_file(conn, not_found_html, "text/html")
 

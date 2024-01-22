@@ -49,8 +49,8 @@ def upload(file_metadata, file_generator):
     id = genId()
     metadata[id] = file_metadata
 
-    replication_factor = 3
-    datanode_list = monitor.list()
+    replication_factor = 1
+    datanode_list = monitor.list_alive()
     
     # error handling
     if len(datanode_list) == 0:
