@@ -2,7 +2,8 @@
 
 # Set the variables
 set username "aluno"
-set hostname "192.168.12.1"
+set hostname "192.168.40.68"
+#set hostname "192.168.40.177"
 set password "aula321"
 
 set script_path "install.sh"
@@ -14,15 +15,21 @@ close $script_file
 spawn ssh $username@$hostname
 
 # Expect the password prompt
-expect "?*sword:"
+expect "sword:"
 
 # Send the password
 send "$password\r"
 
-
-
 expect "?*$?*"
+send "echo HELLOOOOOOO\r"
+send "echo TEST > ~/test.txt\r"
+
+
 send "$script_content"
+expect "?*$?*"
+send "ifconfig\r"
+expect "?*$?*"
+send "exit\r"
 
 # Wait for the command to complete
 expect eof
