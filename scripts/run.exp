@@ -14,16 +14,27 @@ close $script_file
 # Spawn the SSH process
 spawn ssh $username@$hostname
 
-# Expect the password prompt
-expect "sword:"
+expect {
+    "Are you sure" {
+        send "yes\r"
+        expect "sword:"
+        send "$password\r"
+        exp_continue
+    }
+    "sword:" {
+        send "$password\r"
+        exp_continue
+    }
+}
 
-# Send the password
-send "$password\r"
+
+## Expect the password prompt
+#expect "sword:"
+#
+## Send the password
+#send "$password\r"
 
 expect "?*$?*"
-send "echo HELLOOOOOOO\r"
-send "echo TEST > ~/test.txt\r"
-
 
 send "$script_content"
 expect "?*$?*"

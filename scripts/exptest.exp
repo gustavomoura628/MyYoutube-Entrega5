@@ -1,0 +1,14 @@
+#!/bin/expect
+
+spawn ./test.sh
+
+expect {
+    "3=5" {
+        send "NOOOO\r"
+        exp_continue
+    }
+    "2+2=4" {
+        send "YES\r"
+        exp_continue
+    }
+}
