@@ -9,6 +9,7 @@ measured_time = {}
 
 def download_video(thread_number):
     database = rpyc.connect_by_service("Database").root
+    database._config['sync_request_timeout'] = None
 
     start_time = time.time()
     for chunk in database.file("15a51fc1-999e-46a7-9b61-5d940ab978a7"):

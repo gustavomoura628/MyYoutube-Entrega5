@@ -2,7 +2,10 @@
 #datanode = rpyc.connect_by_service("Datanode").root
 import rpyc
 monitor = rpyc.connect_by_service("Monitor").root
+monitor._config['sync_request_timeout'] = None
+
 load_balancer = rpyc.connect_by_service("LoadBalancer").root
+load_balancer._config['sync_request_timeout'] = None
 
 #distributed database
 import uuid
@@ -69,6 +72,7 @@ def upload(file_metadata, file_generator):
         #REMOTE SERVICE CALL
         datanode_ip, datanode_port = datanode.split(":")
         datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+        datanode_service._config['sync_request_timeout'] = None
         file_descriptors.append(datanode_service.getWriteFileProxy(id))
 
         ##TODO: THIS BREAKS EVERYTHING
@@ -101,6 +105,7 @@ def download(id):
     print(f'Downloading from {datanode}')
     datanode_ip, datanode_port = datanode.split(":")
     datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+    datanode_service._config['sync_request_timeout'] = None
     return datanode_service.file(id)
 
 # deletes file
@@ -109,6 +114,7 @@ def delete(id):
         print(f'Deleting from {datanode}')
         datanode_ip, datanode_port = datanode.split(":")
         datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+        datanode_service._config['sync_request_timeout'] = None
         datanode_service.delete(id)
 
     metadata.pop(id)
