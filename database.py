@@ -68,6 +68,7 @@ def upload(file_metadata, file_generator):
 
     #datanodes = random.sample(datanode_list, replication_factor)
     datanodes = datanode_list
+    print("Datanodes list = ",datanodes)
     file_descriptors = []
     for datanode in datanodes:
         print(f'Uploading from {datanode}')
