@@ -16,7 +16,6 @@ else
 fi
 
 pip install rpyc
-pip install pickle
 
 previous_process=$(netstat -nlp | grep 8090 | awk '{print $7}' | perl -pe "s/\/.*//")
 echo previous process = $previous_process
