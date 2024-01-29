@@ -22,7 +22,7 @@ def download_video(thread_number):
 
 
 def main():
-    number_of_clients = 10
+    number_of_clients = 20
 
     # Create a thread for each number
     threads = []
