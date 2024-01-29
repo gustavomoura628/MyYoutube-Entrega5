@@ -15,6 +15,9 @@ else
     git pull
 fi
 
+pip install rpyc
+pip install pickle
+
 previous_process=$(netstat -nlp | grep 8090 | awk '{print $7}' | perl -pe "s/\/.*//")
 echo previous process = $previous_process
 if [ -n "$previous_process" ]; then kill $previous_process; fi
