@@ -50,7 +50,7 @@ def upload(file_metadata, file_generator):
     id = genId()
     metadata[id] = file_metadata
 
-    replication_factor = 1
+    replication_factor = 5
     #datanode_list = monitor.list_alive()
     datanode_list = load_balancer.get_nodes_to_store(replication_factor)
     
