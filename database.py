@@ -2,6 +2,7 @@
 #datanode = rpyc.connect_by_service("Datanode").root
 import rpyc
 monitor = rpyc.connect_by_service("Monitor").root
+load_balancer = rpyc.connect_by_service("LoadBalancer").root
 
 #distributed database
 import uuid
@@ -50,7 +51,8 @@ def upload(file_metadata, file_generator):
     metadata[id] = file_metadata
 
     replication_factor = 1
-    datanode_list = monitor.list_alive()
+    #datanode_list = monitor.list_alive()
+    datanode_list = load_balancer.get_nodes_to_store(replication_factor)
     
     # error handling
     if len(datanode_list) == 0:
@@ -59,7 +61,8 @@ def upload(file_metadata, file_generator):
         print("ERROR: NOT ENOUGH DATANODES ALIVE FOR REPLICATION FACTOR")
         exit(1)
 
-    datanodes = random.sample(datanode_list, replication_factor)
+    #datanodes = random.sample(datanode_list, replication_factor)
+    datanodes = datanode_list
     file_descriptors = []
     for datanode in datanodes:
         print(f'Uploading from {datanode}')
@@ -91,9 +94,10 @@ def upload(file_metadata, file_generator):
 def download(id):
     list = metadata[id]['datanode_list']
     print(f'list = {list}')
-    aliveList = monitor.aliveFromList(list)
-    print(f'alivelist = {aliveList}')
-    datanode = random.choice(aliveList)
+    datanode = load_balancer.get_node_to_retrieve(list)
+    #aliveList = monitor.aliveFromList(list)
+    #print(f'alivelist = {aliveList}')
+    #datanode = random.choice(aliveList)
     print(f'Downloading from {datanode}')
     datanode_ip, datanode_port = datanode.split(":")
     datanode_service = rpyc.connect(datanode_ip, datanode_port).root

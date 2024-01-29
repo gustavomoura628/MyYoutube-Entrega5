@@ -18,10 +18,14 @@ monitor.register(PORT)
 
 class FileProxy():
     def __init__(self, path, arg):
+        monitor.increment_connections_counter(PORT)
         self.file_descriptor = open(path, arg)
     def write(self, data):
         self.file_descriptor.write(data)
     def close(self):
+        # Gambiarra
+        monitor.increment_file_counter(PORT)
+        monitor.decrement_connections_counter(PORT)
         self.file_descriptor.close()
 
 class DatanodeService(rpyc.Service):
@@ -34,6 +38,7 @@ class DatanodeService(rpyc.Service):
         return file(id)
 
     def exposed_delete(self, id):
+        monitor.decrement_file_counter(PORT)
         return delete(id)
 
     def exposed_upload(self, id, chunk_generator):
@@ -44,6 +49,7 @@ class DatanodeService(rpyc.Service):
         return FileProxy("files/{}".format(id), "wb")
 
 def file(id):
+    monitor.increment_connections_counter(PORT)
     print("Downloading {}".format(id))
     file = open("files/{}".format(id), "rb")
     while True:
@@ -52,12 +58,14 @@ def file(id):
             break
         yield chunk
     file.close()
+    monitor.decrement_connections_counter(PORT)
 
 def delete(id):
     print("Removing {}".format(id))
     os.remove("files/{}".format(id))
 
 def upload(id, chunk_generator):
+    monitor.increment_connections_counter(PORT)
     print("Uploading {}".format(id))
 
     file = open("files/{}".format(id), "wb")
@@ -65,6 +73,7 @@ def upload(id, chunk_generator):
         file.write(chunk)
     file.close()
 
+    monitor.decrement_connections_counter(PORT)
     return id
 
 
