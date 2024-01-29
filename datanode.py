@@ -12,8 +12,9 @@ else:
 
 import rpyc
 
-monitor = rpyc.connect_by_service("Monitor").root
+monitor = rpyc.connect_by_service("Monitor")
 monitor._config['sync_request_timeout'] = None
+monitor = monitor.root
 PORT = 8090
 monitor.register(PORT)
 

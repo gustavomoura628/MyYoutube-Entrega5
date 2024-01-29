@@ -1,6 +1,7 @@
 import rpyc
-database = rpyc.connect_by_service("Database").root
+database = rpyc.connect_by_service("Database")
 database._config['sync_request_timeout'] = None
+database = database.root
 
 import socket
 import os

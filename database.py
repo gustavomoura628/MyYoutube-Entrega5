@@ -1,11 +1,13 @@
 #import rpyc
 #datanode = rpyc.connect_by_service("Datanode").root
 import rpyc
-monitor = rpyc.connect_by_service("Monitor").root
+monitor = rpyc.connect_by_service("Monitor")
 monitor._config['sync_request_timeout'] = None
+monitor = monitor.root
 
-load_balancer = rpyc.connect_by_service("LoadBalancer").root
+load_balancer = rpyc.connect_by_service("LoadBalancer")
 load_balancer._config['sync_request_timeout'] = None
+load_balancer = load_balancer.root
 
 #distributed database
 import uuid
@@ -71,8 +73,9 @@ def upload(file_metadata, file_generator):
         print(f'Uploading from {datanode}')
         #REMOTE SERVICE CALL
         datanode_ip, datanode_port = datanode.split(":")
-        datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+        datanode_service = rpyc.connect(datanode_ip, datanode_port)
         datanode_service._config['sync_request_timeout'] = None
+        datanode_service = datanode_service.root
         file_descriptors.append(datanode_service.getWriteFileProxy(id))
 
         ##TODO: THIS BREAKS EVERYTHING
@@ -104,8 +107,9 @@ def download(id):
     #datanode = random.choice(aliveList)
     print(f'Downloading from {datanode}')
     datanode_ip, datanode_port = datanode.split(":")
-    datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+    datanode_service = rpyc.connect(datanode_ip, datanode_port)
     datanode_service._config['sync_request_timeout'] = None
+    datanode_service = datanode_service.root
     return datanode_service.file(id)
 
 # deletes file
@@ -113,8 +117,9 @@ def delete(id):
     for datanode in metadata[id]['datanode_list']:
         print(f'Deleting from {datanode}')
         datanode_ip, datanode_port = datanode.split(":")
-        datanode_service = rpyc.connect(datanode_ip, datanode_port).root
+        datanode_service = rpyc.connect(datanode_ip, datanode_port)
         datanode_service._config['sync_request_timeout'] = None
+        datanode_service = datanode_service.root
         datanode_service.delete(id)
 
     metadata.pop(id)
