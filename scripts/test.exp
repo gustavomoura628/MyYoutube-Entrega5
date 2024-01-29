@@ -1,0 +1,12 @@
+#!/usr/bin/expect
+
+# Check if the correct number of arguments is provided
+if {$argc != 1} {
+    puts "Usage: $argv0 <ip>"
+    exit 1
+}
+# Access the argument
+set myArgument [lindex $argv 0]
+
+# Now you can use the variable $myArgument in your script
+puts "Received argument: $myArgument"

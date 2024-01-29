@@ -2,10 +2,16 @@
 
 exp_internal 1
 
+# Check if the correct number of arguments is provided
+if {$argc != 1} {
+    puts "Usage: $argv0 <hostname>"
+    exit 1
+}
 # Set the variables
 set username "aluno"
-set hostname "192.168.40.68"
 #set hostname "192.168.40.177"
+#set hostname "192.168.40.68"
+set hostname [lindex $argv 0]
 set password "aula321"
 
 set script_path "install.sh"
