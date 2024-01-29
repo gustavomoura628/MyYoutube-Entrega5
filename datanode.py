@@ -21,12 +21,12 @@ monitor.register(PORT)
 class FileProxy():
     def __init__(self, path, arg):
         monitor.increment_connections_counter(PORT)
+        monitor.increment_file_counter(PORT)
         self.file_descriptor = open(path, arg)
     def write(self, data):
         self.file_descriptor.write(data)
     def close(self):
         # Gambiarra
-        monitor.increment_file_counter(PORT)
         monitor.decrement_connections_counter(PORT)
         self.file_descriptor.close()
 

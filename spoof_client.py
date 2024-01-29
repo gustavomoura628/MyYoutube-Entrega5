@@ -5,6 +5,7 @@ def print_number(number):
 
 import rpyc
 import time
+import random
 measured_time = {}
 
 def download_video(thread_number):
@@ -14,7 +15,7 @@ def download_video(thread_number):
 
     start_time = time.time()
     for chunk in database.file("15a51fc1-999e-46a7-9b61-5d940ab978a7"):
-        pass
+        print("Thread",thread_number,"Received a chunk of len",len(chunk))
 
     duration = time.time() - start_time
     measured_time[str(thread_number)] = duration
@@ -26,6 +27,7 @@ def main():
     # Create a thread for each number
     threads = []
     for number in range(number_of_clients):
+        time.sleep(0.2)
         thread = threading.Thread(target=download_video, args=(number,), name=f"Thread-{number}")
         threads.append(thread)
         thread.start()
