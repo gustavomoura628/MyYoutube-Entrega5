@@ -38,6 +38,7 @@ class NameServiceService(rpyc.Service):
         name = genId()
         name_service_data[name] = True
         updateDataFile()
+        print("Generated name",name)
         return name
 
 if __name__ == "__main__":

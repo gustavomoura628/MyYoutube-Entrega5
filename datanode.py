@@ -58,14 +58,18 @@ class DatanodeService(rpyc.Service):
         pass
 
     def exposed_file(self, id):
+        print("File",id)
         return file(id)
 
     def exposed_delete(self, id):
+        print("Delete",id)
         monitor.decrement_file_counter(datanode_name)
         return delete(id)
 
-    def exposed_upload(self, id, chunk_generator):
-        return upload(id, chunk_generator)
+    #Deprecated
+    #def exposed_upload(self, id, chunk_generator):
+    #    print("Upload",id)
+    #    return upload(id, chunk_generator)
 
     def exposed_getWriteFileProxy(self, id):
         print("Getting Write File Proxy {}".format(id))

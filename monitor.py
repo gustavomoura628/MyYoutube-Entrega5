@@ -36,29 +36,37 @@ class MonitorService(rpyc.Service):
     
     # List of all Nodes currently alive
     def exposed_list_alive(self):
+        print("List alive")
         return list_alive()
 
     def exposed_get_host_data_alive(self):
+        print("Host data alive")
         return get_host_data_alive()
 
     # Checks if Node is alive
     def exposed_isAlive(self, client_name):
+        print("isAlive",client_name)
         return isAlive(client_name)
 
     # Receives a list of Nodes and returns its subset of all Nodes alive
     def exposed_aliveFromList(self, list):
+        print("AliveFromList",list)
         return aliveFromList(list)
 
     def exposed_increment_file_counter(self, client_name):
+        print("increment file",client_name)
         increment_file_counter(client_name)
 
     def exposed_decrement_file_counter(self, client_name):
+        print("decrement file",client_name)
         decrement_file_counter(client_name)
 
     def exposed_increment_connections_counter(self, client_name):
+        print("increment connections",client_name)
         increment_connections_counter(client_name)
 
     def exposed_decrement_connections_counter(self, client_name):
+        print("decrement connections",client_name)
         decrement_connections_counter(client_name)
 
 
