@@ -55,6 +55,7 @@ def upload(file_metadata, file_generator):
     replication_factor = 1
     #datanode_list = monitor.list_alive()
     datanode_list = load_balancer.get_nodes_to_store(replication_factor)
+    print("Datanodes selected to store file:",datanode_list)
     
     # error handling
     if len(datanode_list) == 0:
@@ -70,10 +71,11 @@ def upload(file_metadata, file_generator):
     for datanode in datanodes:
         print(f'Uploading from {datanode}')
         #REMOTE SERVICE CALL
-        datanode_ip, datanode_port = datanode.split(":")
-        datanode_service = rpyc.connect(datanode_ip, datanode_port)
-        datanode_service._config['sync_request_timeout'] = None
-        datanode_service = datanode_service.root
+        #datanode_ip, datanode_port = datanode.split(":")
+        #datanode_service = rpyc.connect(datanode_ip, datanode_port)
+        #datanode_service._config['sync_request_timeout'] = None
+        #datanode_service = datanode_service.root
+        datanode_service = rpyc_helper.connect(datanode)
         file_descriptors.append(datanode_service.getWriteFileProxy(id))
 
         ##TODO: THIS BREAKS EVERYTHING
@@ -104,20 +106,22 @@ def download(id):
     #print(f'alivelist = {aliveList}')
     #datanode = random.choice(aliveList)
     print(f'Downloading from {datanode}')
-    datanode_ip, datanode_port = datanode.split(":")
-    datanode_service = rpyc.connect(datanode_ip, datanode_port)
-    datanode_service._config['sync_request_timeout'] = None
-    datanode_service = datanode_service.root
+    #datanode_ip, datanode_port = datanode.split(":")
+    #datanode_service = rpyc.connect(datanode_ip, datanode_port)
+    #datanode_service._config['sync_request_timeout'] = None
+    #datanode_service = datanode_service.root
+    datanode_service = rpyc_helper.connect(datanode)
     return datanode_service.file(id)
 
 # deletes file
 def delete(id):
     for datanode in metadata[id]['datanode_list']:
         print(f'Deleting from {datanode}')
-        datanode_ip, datanode_port = datanode.split(":")
-        datanode_service = rpyc.connect(datanode_ip, datanode_port)
-        datanode_service._config['sync_request_timeout'] = None
-        datanode_service = datanode_service.root
+        #datanode_ip, datanode_port = datanode.split(":")
+        #datanode_service = rpyc.connect(datanode_ip, datanode_port)
+        #datanode_service._config['sync_request_timeout'] = None
+        #datanode_service = datanode_service.root
+        datanode_service = rpyc_helper.connect(datanode)
         datanode_service.delete(id)
 
     metadata.pop(id)

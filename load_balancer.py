@@ -14,7 +14,9 @@ class LoadBalancerService(rpyc.Service):
         pass
 
     def exposed_get_nodes_to_store(self, number_of_nodes):
+        print("Getting nodes to store")
         hosts_data = monitor.get_host_data_alive()
+        print("Alive hosts = ",hosts_data)
         sorted_addresses = sorted(hosts_data.keys(), key=lambda x: hosts_data[x]['number_of_files'])
         return sorted_addresses[:number_of_nodes]
 
