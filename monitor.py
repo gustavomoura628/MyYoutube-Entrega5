@@ -18,6 +18,8 @@ def updateMonitordataFile():
 
 import rpyc
 class MonitorService(rpyc.Service):
+    ALIASES = ["monitor"]
+
     def on_connect(self, conn):
         addr, port = conn._channel.stream.sock.getpeername()
         self.addr = addr
@@ -146,5 +148,8 @@ def aliveFromList(list):
 # Initialize remote object server and register it to name service
 if __name__ == "__main__":
     from rpyc.utils.server import ThreadedServer
-    t = ThreadedServer(MonitorService, port=8082, auto_register=True, protocol_config = {"allow_public_attrs" : True})
+    MonitorService.ALIASES = ["monitor", "potato"]
+    print("aliases = ",MonitorService.ALIASES)
+    t = ThreadedServer(MonitorService, auto_register=True, protocol_config = {"allow_public_attrs" : True})
+    ThreadedServer(MonitorService, auto_register=True, protocol_config = {"allow_public_attrs" : True})
     t.start()

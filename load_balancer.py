@@ -2,7 +2,7 @@
 import os
 
 import rpyc
-monitor = rpyc.connect_by_service("Monitor")
+monitor = rpyc.connect_by_service("monitor")
 monitor._config['sync_request_timeout'] = None
 monitor = monitor.root
 
@@ -28,5 +28,5 @@ class LoadBalancerService(rpyc.Service):
 # Initialize remote object server and register it to name service
 if __name__ == "__main__":
     from rpyc.utils.server import ThreadedServer
-    t = ThreadedServer(LoadBalancerService, port=8083, auto_register=True, protocol_config = {"allow_public_attrs" : True})
+    t = ThreadedServer(LoadBalancerService, auto_register=True, protocol_config = {"allow_public_attrs" : True})
     t.start()

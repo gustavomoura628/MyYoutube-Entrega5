@@ -1,13 +1,10 @@
 #import rpyc
 #datanode = rpyc.connect_by_service("Datanode").root
 import rpyc
-monitor = rpyc.connect_by_service("Monitor")
-monitor._config['sync_request_timeout'] = None
-monitor = monitor.root
+import rpyc_helper
 
-load_balancer = rpyc.connect_by_service("LoadBalancer")
-load_balancer._config['sync_request_timeout'] = None
-load_balancer = load_balancer.root
+monitor = rpyc_helper.connect("Monitor")
+load_balancer = rpyc_helper.connect("LoadBalancer")
 
 #distributed database
 import uuid
@@ -41,7 +38,7 @@ def idAlreadyExists(id):
     return id in metadata
 
 def genId():
-    id = str(uuid.uuid4())
+    id = "FILE_"+str(uuid.uuid4())
     while idAlreadyExists(id):
         id = str(uuid.uuid4())
     return id
@@ -55,7 +52,7 @@ def upload(file_metadata, file_generator):
     id = genId()
     metadata[id] = file_metadata
 
-    replication_factor = 5
+    replication_factor = 1
     #datanode_list = monitor.list_alive()
     datanode_list = load_balancer.get_nodes_to_store(replication_factor)
     
@@ -168,5 +165,5 @@ class DatabaseService(rpyc.Service):
 # Initialize remote object server and register it to name service
 if __name__ == "__main__":
     from rpyc.utils.server import ThreadedServer
-    t = ThreadedServer(DatabaseService, port=8081, auto_register=True, protocol_config = {"allow_public_attrs" : True})
+    t = ThreadedServer(DatabaseService, auto_register=True, protocol_config = {"allow_public_attrs" : True})
     t.start()
