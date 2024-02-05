@@ -14,8 +14,12 @@ def download_video(thread_number):
     database = database.root
 
     start_time = time.time()
+    chunk_start_time = time.time()
     for chunk in database.file("15a51fc1-999e-46a7-9b61-5d940ab978a7"):
-        print("Thread",thread_number,"Received a chunk of len",len(chunk))
+        #print("Thread",thread_number,"Received a chunk of len",len(chunk))
+        chunk_duration = time.time() - chunk_start_time
+        print("Thread",thread_number,"Received a chunk of len",len(chunk),"current throughput =",len(chunk)/chunk_duration,"bytes/second")
+        chunk_start_time = time.time()
 
     duration = time.time() - start_time
     measured_time[str(thread_number)] = duration

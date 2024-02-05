@@ -47,12 +47,13 @@ def genId():
 def upload(file_metadata, file_generator):
     print("Uploading")
     printDictionary(file_metadata)
+    size = file_metadata["size"]
 
     # metadata has the format: { name: "Name" }
     id = genId()
     metadata[id] = file_metadata
 
-    replication_factor = 1
+    replication_factor = 2
     #datanode_list = monitor.list_alive()
     datanode_list = load_balancer.get_nodes_to_store(replication_factor)
     print("Datanodes selected to store file:",datanode_list)
@@ -70,11 +71,6 @@ def upload(file_metadata, file_generator):
     file_descriptors = []
     for datanode in datanodes:
         print(f'Uploading from {datanode}')
-        #REMOTE SERVICE CALL
-        #datanode_ip, datanode_port = datanode.split(":")
-        #datanode_service = rpyc.connect(datanode_ip, datanode_port)
-        #datanode_service._config['sync_request_timeout'] = None
-        #datanode_service = datanode_service.root
         datanode_service = rpyc_helper.connect(datanode)
         file_descriptors.append(datanode_service.getWriteFileProxy(id))
 
@@ -85,7 +81,10 @@ def upload(file_metadata, file_generator):
             metadata[id]['datanode_list'] = []
         metadata[id]['datanode_list'].append(datanode)
 
+    bytes_sent = 0
     for chunk in file_generator:
+        bytes_sent += len(chunk)
+        print("Uploading file",file_metadata["name"],":",bytes_sent/size,"%")
         for file in file_descriptors:
             file.write(chunk)
 
@@ -98,20 +97,28 @@ def upload(file_metadata, file_generator):
 
 
 # returns a generator
-def download(id):
-    list = metadata[id]['datanode_list']
-    print(f'list = {list}')
-    datanode = load_balancer.get_node_to_retrieve(list)
-    #aliveList = monitor.aliveFromList(list)
-    #print(f'alivelist = {aliveList}')
-    #datanode = random.choice(aliveList)
-    print(f'Downloading from {datanode}')
-    #datanode_ip, datanode_port = datanode.split(":")
-    #datanode_service = rpyc.connect(datanode_ip, datanode_port)
-    #datanode_service._config['sync_request_timeout'] = None
-    #datanode_service = datanode_service.root
-    datanode_service = rpyc_helper.connect(datanode)
-    return datanode_service.file(id)
+def download(id, from_byte=0):
+    while True:
+        try:
+            list = metadata[id]['datanode_list']
+            print(f'list = {list}')
+            datanode = load_balancer.get_node_to_retrieve(list)
+            print(f'Downloading from {datanode}')
+            datanode_service = rpyc_helper.connect(datanode)
+            new_byte = 0
+            catching_up = True
+            for chunk in datanode_service.file(id):
+                if catching_up == True:
+                    if new_byte == from_byte:
+                        catching_up = False
+                    else:
+                        new_byte += len(chunk)
+                if catching_up == False:
+                    from_byte += len(chunk)
+                    print("Got chunk, current progress =",from_byte,"/",metadata[id]["size"])
+                    yield chunk
+        except Exception as e:
+            print("Failed while downloading file, trying to connect to another node")
 
 # deletes file
 def delete(id):

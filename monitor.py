@@ -114,7 +114,7 @@ def ping(client_name):
     print("Diff = {}".format(diff))
 
 def isAlive(client_name):
-    if datetime.datetime.now() - hosts_data[client_name]["ping"] < datetime.timedelta(seconds=10):
+    if datetime.datetime.now() - hosts_data[client_name]["ping"] < datetime.timedelta(seconds=0.2):
         return True
     return False
 
