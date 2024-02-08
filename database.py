@@ -83,7 +83,7 @@ def upload(file_metadata, file_generator):
     bytes_sent = 0
     for chunk in file_generator:
         bytes_sent += len(chunk)
-        print("Uploading file",file_metadata["name"],":",bytes_sent/size,"%")
+        print("Uploading file",file_metadata["name"],":",bytes_sent/size*100,"%")
         for datanode in datanodes:
             try:
                 if file_descriptors[datanode] == None:
@@ -182,7 +182,18 @@ def regenerate():
 
                             print("TRYING TO DOWNLOAD FROM",source_datanode,"TO",destination_datanode)
                             file_generator = source_datanode_service.file(file_id)
-                            destination_datanode_service.upload(file_id,file_generator)
+
+                            file_descriptor = destination_datanode_service.getWriteFileProxy(id)
+
+                            size = metadata[id]["size"]
+                            name = metadata[id]["name"]
+                            bytes_sent = 0
+                            for chunk in file_generator:
+                                bytes_sent += len(chunk)
+                                print("Regenerating file",name,":",bytes_sent/size*100,"%")
+                                file_descriptor.write(chunk)
+
+
                             add_datanode_to_file_sources(destination_datanode,file_id)
                             flag_success = True
                             break
