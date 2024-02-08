@@ -157,18 +157,19 @@ def getList():
 def regenerate():
     print("Initialized regenerate thread")
     while True:
+        print("ALL ONLINE DATANODES:",monitor.list_alive())
         for file_id in metadata:
             all_datanodes = metadata[file_id]['datanode_list']
-            #print("All datanodes with the file =",all_datanodes)
+            print("All datanodes with the file =",all_datanodes)
             datanodes = monitor.aliveFromList(all_datanodes)
-            #print("Datanodes with the file that are alive =",datanodes)
+            print("Datanodes with the file that are alive =",datanodes)
             if len(datanodes) < REPLICATION_FACTOR:
-                #print("File",file_id," has only",len(datanodes),"out of",REPLICATION_FACTOR,"alive")
+                print("File",file_id," has only",len(datanodes),"out of",REPLICATION_FACTOR,"alive")
                 potential_datanodes = load_balancer.get_nodes_to_store(len(all_datanodes)+1)
                 flag_success = False
                 for potential_datanode in potential_datanodes:
                     if len(datanodes) == 0 or len(potential_datanodes) == 0:
-                        #print("Not enough datanodes alive to transfer file")
+                        print("Not enough datanodes alive to transfer file")
                         break
 
                     if potential_datanode not in datanodes:
@@ -203,10 +204,10 @@ def regenerate():
                 if flag_success == True:
                     print("Sucessfully replicated",file_id)
                 else:
-                    #print("Could not replicate",file_id)
+                    print("Could not replicate",file_id)
                     pass
 
-            time.sleep(0.01)
+            time.sleep(1)
 
 import rpyc
 class DatabaseService(rpyc.Service):
