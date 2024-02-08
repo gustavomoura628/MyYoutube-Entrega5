@@ -6,7 +6,7 @@ import rpyc_helper
 monitor = rpyc_helper.connect("Monitor")
 load_balancer = rpyc_helper.connect("LoadBalancer")
 
-REPLICATION_FACTOR = 3
+REPLICATION_FACTOR = 10000
 
 #distributed database
 import uuid

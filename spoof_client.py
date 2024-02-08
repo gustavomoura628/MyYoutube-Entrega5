@@ -16,6 +16,7 @@ def display():
         for t in average_chunk_thoughtput:
             s+=average_chunk_thoughtput[t]
         print("Average chunk throughput =",s/len(average_chunk_thoughtput))
+        print("Average chunk time =",2**20*len(average_chunk_thoughtput)/s)
         time.sleep(0.3)
 
 def download_video(thread_number):
