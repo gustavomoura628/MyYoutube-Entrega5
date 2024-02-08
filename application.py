@@ -1,7 +1,5 @@
 import rpyc
-database = rpyc.connect_by_service("Database")
-database._config['sync_request_timeout'] = None
-database = database.root
+import rpyc_helper
 
 import socket
 import os
@@ -77,6 +75,7 @@ def handle_http_request(conn, addr):
             print(f'/video request')
             video_id = header['url'][len("/video/"):]
 
+            database = rpyc_helper.connect("Database")
             file_length = database.metadata(video_id)['size']
 
             # Returning file to client
@@ -86,6 +85,8 @@ def handle_http_request(conn, addr):
             conn.sendall("\r\n".encode())
 
             
+
+            database = rpyc_helper.connect("Database")
 
             start_time = time.time()
             for chunk in database.file(video_id):
@@ -98,6 +99,7 @@ def handle_http_request(conn, addr):
 
         elif header['url'] == "/list":
             print(f'/list request')
+            database = rpyc_helper.connect("Database")
             list = database.list()
 
             list_html = generate_list_html.generate(list, host = header['Host'])
@@ -107,6 +109,7 @@ def handle_http_request(conn, addr):
             print(f'/watch request')
             video_id = header['url'][len("/watch/"):]
 
+            database = rpyc_helper.connect("Database")
             metadata = database.metadata(video_id)
 
             #TODO: get video metadata
@@ -120,6 +123,7 @@ def handle_http_request(conn, addr):
             search_query = re.sub(r"%[0-9]*", " ", search_query)
 
 
+            database = rpyc_helper.connect("Database")
             list = database.list()
             matches = search.search_strings(list, search_query)
             list_matches = {}
@@ -136,6 +140,7 @@ def handle_http_request(conn, addr):
         elif header['url'].startswith("/delete"):
             print(f'/delete request')
             video_id = header['url'][len("/delete/"):]
+            database = rpyc_helper.connect("Database")
             database.delete(video_id)
             list = database.list()
 
@@ -171,6 +176,7 @@ def handle_http_request(conn, addr):
 
                 file_length = request.get_content_length_of_file()
 
+                database = rpyc_helper.connect("Database")
                 start_time = time.time()
                 video_id = database.upload(video_name, file_length, request.get_file_chunks())
                 total_time = time.time() - start_time
