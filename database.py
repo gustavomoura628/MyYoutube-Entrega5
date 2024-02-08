@@ -184,15 +184,16 @@ def regenerate():
                             print("TRYING TO DOWNLOAD FROM",source_datanode,"TO",destination_datanode)
                             file_generator = source_datanode_service.file(file_id)
 
-                            file_descriptor = destination_datanode_service.getWriteFileProxy(id)
+                            file_descriptor = destination_datanode_service.getWriteFileProxy(file_id)
 
-                            size = metadata[id]["size"]
-                            name = metadata[id]["name"]
+                            size = metadata[file_id]["size"]
+                            name = metadata[file_id]["name"]
                             bytes_sent = 0
                             for chunk in file_generator:
                                 bytes_sent += len(chunk)
                                 print("Regenerating file",name,":",bytes_sent/size*100,"%")
                                 file_descriptor.write(chunk)
+                            file_descriptor.close()
 
 
                             add_datanode_to_file_sources(destination_datanode,file_id)
