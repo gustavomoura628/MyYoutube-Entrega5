@@ -6,7 +6,7 @@ import rpyc_helper
 monitor = rpyc_helper.connect("Monitor")
 load_balancer = rpyc_helper.connect("LoadBalancer")
 
-REPLICATION_FACTOR = 10000
+REPLICATION_FACTOR = 3
 
 #distributed database
 import uuid
@@ -157,58 +157,62 @@ def getList():
 def regenerate():
     print("Initialized regenerate thread")
     while True:
-        print("ALL ONLINE DATANODES:",monitor.list_alive())
-        for file_id in metadata:
-            all_datanodes = metadata[file_id]['datanode_list']
-            print("All datanodes with the file =",all_datanodes)
-            datanodes = monitor.aliveFromList(all_datanodes)
-            print("Datanodes with the file that are alive =",datanodes)
-            if len(datanodes) < REPLICATION_FACTOR:
-                print("File",file_id," has only",len(datanodes),"out of",REPLICATION_FACTOR,"alive")
-                potential_datanodes = load_balancer.get_nodes_to_store(len(all_datanodes)+1)
-                flag_success = False
-                for potential_datanode in potential_datanodes:
-                    if len(datanodes) == 0 or len(potential_datanodes) == 0:
-                        print("Not enough datanodes alive to transfer file")
-                        break
-
-                    if potential_datanode not in datanodes:
-                        print("Found potential_datanode to store it:",potential_datanode)
-                        try:
-                            source_datanode = load_balancer.get_node_to_retrieve(all_datanodes)
-                            destination_datanode = potential_datanode
-
-                            source_datanode_service = rpyc_helper.connect(source_datanode)
-                            destination_datanode_service = rpyc_helper.connect(destination_datanode)
-
-                            print("TRYING TO DOWNLOAD FROM",source_datanode,"TO",destination_datanode)
-                            file_generator = source_datanode_service.file(file_id)
-
-                            file_descriptor = destination_datanode_service.getWriteFileProxy(file_id)
-
-                            size = metadata[file_id]["size"]
-                            name = metadata[file_id]["name"]
-                            bytes_sent = 0
-                            for chunk in file_generator:
-                                bytes_sent += len(chunk)
-                                print("Regenerating file",name,":",bytes_sent/size*100,"%")
-                                file_descriptor.write(chunk)
-                            file_descriptor.close()
-
-
-                            add_datanode_to_file_sources(destination_datanode,file_id)
-                            flag_success = True
+        try:
+            print("ALL ONLINE DATANODES:",monitor.list_alive())
+            for file_id in metadata:
+                all_datanodes = metadata[file_id]['datanode_list']
+                print("All datanodes with the file =",all_datanodes)
+                datanodes = monitor.aliveFromList(all_datanodes)
+                print("Datanodes with the file that are alive =",datanodes)
+                if len(datanodes) < REPLICATION_FACTOR:
+                    print("File",file_id," has only",len(datanodes),"out of",REPLICATION_FACTOR,"alive")
+                    potential_datanodes = load_balancer.get_nodes_to_store(len(all_datanodes)+1)
+                    flag_success = False
+                    for potential_datanode in potential_datanodes:
+                        if len(datanodes) == 0 or len(potential_datanodes) == 0:
+                            print("Not enough datanodes alive to transfer file")
                             break
-                        except Exception as e:
-                            print("ERROR: while trying to regenerate file {} to node {}: {}".format(file_id, potential_datanode, e))
 
-                if flag_success == True:
-                    print("Sucessfully replicated",file_id)
-                else:
-                    print("Could not replicate",file_id)
-                    pass
+                        if potential_datanode not in datanodes:
+                            print("Found potential_datanode to store it:",potential_datanode)
+                            try:
+                                source_datanode = load_balancer.get_node_to_retrieve(all_datanodes)
+                                destination_datanode = potential_datanode
 
-            time.sleep(1)
+                                source_datanode_service = rpyc_helper.connect(source_datanode)
+                                destination_datanode_service = rpyc_helper.connect(destination_datanode)
+
+                                print("TRYING TO DOWNLOAD FROM",source_datanode,"TO",destination_datanode)
+                                file_generator = source_datanode_service.file(file_id)
+
+                                file_descriptor = destination_datanode_service.getWriteFileProxy(file_id)
+
+                                size = metadata[file_id]["size"]
+                                name = metadata[file_id]["name"]
+                                bytes_sent = 0
+                                for chunk in file_generator:
+                                    bytes_sent += len(chunk)
+                                    print("Regenerating file",name,":",bytes_sent/size*100,"%")
+                                    file_descriptor.write(chunk)
+                                file_descriptor.close()
+
+
+                                add_datanode_to_file_sources(destination_datanode,file_id)
+                                flag_success = True
+                                break
+                            except Exception as e:
+                                print("ERROR: while trying to regenerate file {} to node {}: {}".format(file_id, potential_datanode, e))
+
+                    if flag_success == True:
+                        print("Sucessfully replicated",file_id)
+                    else:
+                        print("Could not replicate",file_id)
+                        pass
+
+        except Exception as e:
+            print("Regenerate thread failed")
+
+        time.sleep(3)
 
 import rpyc
 class DatabaseService(rpyc.Service):
